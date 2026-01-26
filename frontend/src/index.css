@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+.initiative-bar {
+  @apply absolute h-10 rounded-md px-2 py-1 text-white text-sm font-medium cursor-pointer transition-all;
+  @apply hover:shadow-lg hover:scale-[1.02];
+  @apply flex items-center justify-between gap-2 overflow-hidden;
+}
+
+.initiative-bar.retail-therapy {
+  @apply bg-indigo-500 hover:bg-indigo-600;
+}
+
+.initiative-bar.json-id {
+  @apply bg-green-500 hover:bg-green-600;
+}
+
+.tooltip {
+  @apply absolute z-50 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg;
+  @apply max-w-xs whitespace-pre-wrap;
+}
+
+.tooltip::before {
+  content: '';
+  @apply absolute -top-1 left-4 w-2 h-2 bg-gray-900 rotate-45;
+}

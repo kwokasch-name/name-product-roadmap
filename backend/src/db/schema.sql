@@ -1,0 +1,45 @@
+-- OKRs table
+CREATE TABLE IF NOT EXISTS okrs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    time_frame TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Key Results table
+CREATE TABLE IF NOT EXISTS key_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    okr_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    target_value REAL,
+    current_value REAL DEFAULT 0,
+    unit TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE
+);
+
+-- Initiatives table
+CREATE TABLE IF NOT EXISTS initiatives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    developer_count INTEGER DEFAULT 1,
+    okr_id INTEGER,
+    success_criteria TEXT,
+    pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
+    status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE SET NULL
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod);
+CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id);
+CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id);
