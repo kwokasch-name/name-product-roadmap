@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { InitiativeBar } from './InitiativeBar';
 import { getInitiativePosition, getMonthsBetween } from '../../lib/dateUtils';
 import { MONTH_WIDTH } from './TimelineHeader';
