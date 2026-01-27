@@ -1,37 +1,78 @@
 import { useScopedInitiatives } from '../../hooks/useInitiatives';
 import { useRoadmapContext } from '../../context/RoadmapContext';
-import { TimelineHeader } from './TimelineHeader';
+import { TimelineHeader, MONTH_WIDTH } from './TimelineHeader';
 import { WorkstreamLane } from './WorkstreamLane';
 import { Button } from '../ui/Button';
+import { useRef, useEffect } from 'react';
+import { getMonthsBetween } from '../../lib/dateUtils';
 
 export function RoadmapView() {
   const { data: initiatives, isLoading } = useScopedInitiatives();
   const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen } = useRoadmapContext();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const retailTherapyInitiatives = initiatives?.filter((i) => i.pod === 'Retail Therapy') || [];
   const jsonIdInitiatives = initiatives?.filter((i) => i.pod === 'JSON ID') || [];
 
+  // Auto-center on current month on mount
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const now = new Date();
+      const months = getMonthsBetween(viewStartDate, viewEndDate);
+      const currentMonthIndex = months.findIndex(
+        (month) => month.getMonth() === now.getMonth() && month.getFullYear() === now.getFullYear()
+      );
+
+      if (currentMonthIndex >= 0) {
+        const containerWidth = scrollContainerRef.current.offsetWidth;
+        // Center the current month: scroll to show current month in the middle
+        const scrollPosition = currentMonthIndex * MONTH_WIDTH - containerWidth / 2 + MONTH_WIDTH / 2;
+        scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition);
+      }
+    }
+  }, [viewStartDate, viewEndDate]);
+
   const handlePrevious = () => {
-    const newStart = new Date(viewStartDate);
-    const newEnd = new Date(viewEndDate);
-    newStart.setMonth(newStart.getMonth() - 1);
-    newEnd.setMonth(newEnd.getMonth() - 1);
-    setViewRange(newStart, newEnd);
+    if (scrollContainerRef.current) {
+      const containerWidth = scrollContainerRef.current.offsetWidth;
+      scrollContainerRef.current.scrollBy({ left: -containerWidth, behavior: 'smooth' });
+    }
   };
 
   const handleNext = () => {
-    const newStart = new Date(viewStartDate);
-    const newEnd = new Date(viewEndDate);
-    newStart.setMonth(newStart.getMonth() + 1);
-    newEnd.setMonth(newEnd.getMonth() + 1);
-    setViewRange(newStart, newEnd);
+    if (scrollContainerRef.current) {
+      const containerWidth = scrollContainerRef.current.offsetWidth;
+      scrollContainerRef.current.scrollBy({ left: containerWidth, behavior: 'smooth' });
+    }
   };
 
   const handleToday = () => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 6, 0);
-    setViewRange(start, end);
+    const year = now.getFullYear();
+    // Ensure view range is set to current year
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
+    
+    // Update range if needed
+    if (viewStartDate.getFullYear() !== year || viewEndDate.getFullYear() !== year) {
+      setViewRange(start, end);
+    }
+
+    // Scroll to current month after a brief delay to allow range update
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const months = getMonthsBetween(start, end);
+        const currentMonthIndex = months.findIndex(
+          (month) => month.getMonth() === now.getMonth() && month.getFullYear() === now.getFullYear()
+        );
+
+        if (currentMonthIndex >= 0) {
+          const containerWidth = scrollContainerRef.current.offsetWidth;
+          const scrollPosition = currentMonthIndex * MONTH_WIDTH - containerWidth / 2 + MONTH_WIDTH / 2;
+          scrollContainerRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
+        }
+      }
+    }, 0);
   };
 
   return (
@@ -60,11 +101,14 @@ export function RoadmapView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-white border border-gray-200 rounded-lg m-4">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-x-auto overflow-y-auto bg-white border border-gray-200 rounded-lg m-4"
+      >
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
         ) : (
-          <>
+          <div style={{ width: 'max-content' }}>
             <TimelineHeader startDate={viewStartDate} endDate={viewEndDate} />
             <WorkstreamLane
               title="Retail Therapy"
@@ -78,7 +122,7 @@ export function RoadmapView() {
               viewStart={viewStartDate}
               viewEnd={viewEndDate}
             />
-          </>
+          </div>
         )}
       </div>
     </div>

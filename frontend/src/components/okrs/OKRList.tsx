@@ -8,6 +8,18 @@ export function OKRList() {
   const { data: okrs, isLoading } = useOKRs();
   const { setIsOKRFormOpen } = useRoadmapContext();
 
+  // Filter OKRs to only show January - March
+  const filteredOKRs = okrs?.filter((okr) => {
+    if (!okr.timeFrame) return false;
+    const timeFrameLower = okr.timeFrame.toLowerCase();
+    return (
+      timeFrameLower.includes('jan') ||
+      timeFrameLower.includes('feb') ||
+      timeFrameLower.includes('mar') ||
+      timeFrameLower.includes('q1')
+    );
+  });
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -21,12 +33,12 @@ export function OKRList() {
         {isLoading && (
           <div className="text-sm text-gray-500 text-center py-4">Loading...</div>
         )}
-        {!isLoading && okrs?.length === 0 && (
+        {!isLoading && filteredOKRs?.length === 0 && (
           <div className="text-sm text-gray-500 text-center py-4">
-            No OKRs yet. Add one to get started.
+            No OKRs for January - March. Add one to get started.
           </div>
         )}
-        {okrs?.map((okr) => (
+        {filteredOKRs?.map((okr) => (
           <OKRCard key={okr.id} okr={okr} />
         ))}
       </div>

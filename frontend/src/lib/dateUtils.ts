@@ -61,7 +61,10 @@ export function getInitiativePosition(
 
 export function getDefaultViewRange(): { start: Date; end: Date } {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 6, 0);
+  const year = now.getFullYear();
+  // Set to January 1st
+  const start = new Date(year, 0, 1);
+  // Set to December 31st (full year)
+  const end = new Date(year, 11, 31);
   return { start, end };
 }

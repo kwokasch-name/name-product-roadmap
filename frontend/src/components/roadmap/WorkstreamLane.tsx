@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { InitiativeBar } from './InitiativeBar';
-import { getInitiativePosition } from '../../lib/dateUtils';
+import { getInitiativePosition, getMonthsBetween } from '../../lib/dateUtils';
+import { MONTH_WIDTH } from './TimelineHeader';
 import type { Initiative, Pod } from '../../types';
 
 interface WorkstreamLaneProps {
@@ -10,7 +11,7 @@ interface WorkstreamLaneProps {
   viewEnd: Date;
 }
 
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = 240;
 const ROW_GAP = 8;
 
 function assignRows(
@@ -39,22 +40,11 @@ function assignRows(
 
 export function WorkstreamLane({ title, initiatives, viewStart, viewEnd }: WorkstreamLaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
+  const months = getMonthsBetween(viewStart, viewEnd);
+  const totalWidth = months.length * MONTH_WIDTH;
 
   const getPositionedInitiatives = () => {
-    if (!containerWidth) return [];
+    if (!totalWidth) return [];
 
     const items = initiatives
       .filter((init) => init.startDate && init.endDate)
@@ -64,7 +54,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd }: Works
           init.endDate!,
           viewStart,
           viewEnd,
-          containerWidth
+          totalWidth
         );
         return position ? { initiative: init, position } : null;
       })
@@ -92,7 +82,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd }: Works
           {title}
         </span>
       </div>
-      <div ref={containerRef} className="flex-1 relative bg-white">
+      <div ref={containerRef} className="relative bg-white" style={{ width: totalWidth }}>
         {positionedInitiatives.map(({ initiative, position, row }) => (
           <InitiativeBar key={initiative.id} initiative={initiative} position={position} row={row} />
         ))}
