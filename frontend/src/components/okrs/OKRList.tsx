@@ -7,7 +7,7 @@ import type { OKR } from '../../types';
 
 export function OKRList() {
   const { data: okrs, isLoading } = useOKRs();
-  const { setIsOKRFormOpen } = useRoadmapContext();
+  const { setIsOKRFormOpen, selectedOKRIds, selectAllOKRs, deselectAllOKRs } = useRoadmapContext();
 
   // Filter OKRs to only show January - March
   const filteredOKRs = okrs?.filter((okr) => {
@@ -47,13 +47,35 @@ export function OKRList() {
     );
   };
 
+  const allOKRIds = filteredOKRs.map(okr => okr.id);
+  const allSelected = filteredOKRs.length > 0 && filteredOKRs.every(okr => selectedOKRIds.has(okr.id));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      deselectAllOKRs();
+    } else {
+      selectAllOKRs(allOKRIds);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">OKRs</h2>
-        <Button size="sm" onClick={() => setIsOKRFormOpen(true)}>
-          + Add
-        </Button>
+        <div className="flex items-center gap-2">
+          {filteredOKRs.length > 0 && (
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={handleSelectAll}
+            >
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setIsOKRFormOpen(true)}>
+            + Add
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

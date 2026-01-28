@@ -8,11 +8,18 @@ import { getMonthsBetween } from '../../lib/dateUtils';
 
 export function RoadmapView() {
   const { data: initiatives, isLoading } = useScopedInitiatives();
-  const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen } = useRoadmapContext();
+  const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen, selectedOKRIds } = useRoadmapContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const retailTherapyInitiatives = initiatives?.filter((i) => i.pod === 'Retail Therapy') || [];
-  const jsonIdInitiatives = initiatives?.filter((i) => i.pod === 'JSON ID') || [];
+  // Filter initiatives based on selected OKRs
+  // If no OKRs are selected, show all initiatives
+  // If OKRs are selected, only show initiatives linked to those OKRs
+  const filteredInitiatives = selectedOKRIds.size > 0
+    ? initiatives?.filter((i) => i.okrId !== null && selectedOKRIds.has(i.okrId)) || []
+    : initiatives || [];
+
+  const retailTherapyInitiatives = filteredInitiatives.filter((i) => i.pod === 'Retail Therapy');
+  const jsonIdInitiatives = filteredInitiatives.filter((i) => i.pod === 'JSON ID');
 
   // Auto-center on current month on mount
   useEffect(() => {

@@ -1,13 +1,39 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
+import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
 import { useCreateOKR } from '../../hooks/useOKRs';
 import { useRoadmapContext } from '../../context/RoadmapContext';
 import type { Pod } from '../../types';
 
 const ALL_PODS: Pod[] = ['Retail Therapy', 'JSON ID'];
+
+function generateTimeWindowOptions() {
+  const currentYear = new Date().getFullYear();
+  const options = [];
+  
+  // Add quarters for current year and next year
+  for (let year = currentYear; year <= currentYear + 1; year++) {
+    for (let q = 1; q <= 4; q++) {
+      options.push({ value: `Q${q} ${year}`, label: `Q${q} ${year}` });
+    }
+  }
+  
+  // Add halves for current year and next year
+  for (let year = currentYear; year <= currentYear + 1; year++) {
+    options.push({ value: `H1 ${year}`, label: `H1 ${year}` });
+    options.push({ value: `H2 ${year}`, label: `H2 ${year}` });
+  }
+  
+  // Add full year for current year and next year
+  for (let year = currentYear; year <= currentYear + 1; year++) {
+    options.push({ value: `EOY ${year}`, label: `EOY ${year}` });
+  }
+  
+  return options;
+}
 
 export function OKRForm() {
   const { isOKRFormOpen, setIsOKRFormOpen } = useRoadmapContext();
@@ -70,11 +96,14 @@ export function OKRForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <Input
-          label="Time Frame"
-          placeholder="Q1 2026"
+        <Select
+          label="Time Window"
           value={timeFrame}
           onChange={(e) => setTimeFrame(e.target.value)}
+          options={[
+            { value: '', label: 'Select time window...' },
+            ...generateTimeWindowOptions(),
+          ]}
         />
         
         <div className="space-y-3">
