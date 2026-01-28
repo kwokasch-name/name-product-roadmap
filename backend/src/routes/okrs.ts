@@ -5,12 +5,14 @@ import type { OKR, KeyResult, CreateOKRInput, UpdateOKRInput, CreateKeyResultInp
 const router = Router();
 
 // Helper to transform DB row to OKR
-function rowToOKR(row: any): OKR {
+function rowToOKR(row: any, pods: Pod[] = []): OKR {
   return {
     id: row.id,
     title: row.title,
     description: row.description,
     timeFrame: row.time_frame,
+    isCompanyWide: Boolean(row.is_company_wide),
+    pods: pods,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,8 +37,9 @@ router.get('/', (req, res) => {
     const okrs = db.prepare('SELECT * FROM okrs ORDER BY created_at DESC').all() as any[];
     const okrsWithKRs = okrs.map(okr => {
       const keyResults = db.prepare('SELECT * FROM key_results WHERE okr_id = ?').all(okr.id) as any[];
+      const pods = db.prepare('SELECT pod FROM okr_pods WHERE okr_id = ?').all(okr.id) as any[];
       return {
-        ...rowToOKR(okr),
+        ...rowToOKR(okr, pods.map(p => p.pod as Pod)),
         keyResults: keyResults.map(rowToKeyResult),
       };
     });
@@ -55,8 +58,9 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ error: 'OKR not found' });
     }
     const keyResults = db.prepare('SELECT * FROM key_results WHERE okr_id = ?').all(okr.id) as any[];
+    const pods = db.prepare('SELECT pod FROM okr_pods WHERE okr_id = ?').all(okr.id) as any[];
     res.json({
-      ...rowToOKR(okr),
+      ...rowToOKR(okr, pods.map(p => p.pod as Pod)),
       keyResults: keyResults.map(rowToKeyResult),
     });
   } catch (error) {
@@ -68,16 +72,31 @@ router.get('/:id', (req, res) => {
 // POST /api/okrs - Create new OKR
 router.post('/', (req, res) => {
   try {
-    const { title, description, timeFrame } = req.body as CreateOKRInput;
+    const { title, description, timeFrame, isCompanyWide, pods } = req.body as CreateOKRInput;
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
+    
     const result = db.prepare(
-      'INSERT INTO okrs (title, description, time_frame) VALUES (?, ?, ?)'
-    ).run(title, description || null, timeFrame || null);
+      'INSERT INTO okrs (title, description, time_frame, is_company_wide) VALUES (?, ?, ?, ?)'
+    ).run(title, description || null, timeFrame || null, isCompanyWide ? 1 : 0);
 
-    const okr = db.prepare('SELECT * FROM okrs WHERE id = ?').get(result.lastInsertRowid) as any;
-    res.status(201).json({ ...rowToOKR(okr), keyResults: [] });
+    const okrId = result.lastInsertRowid;
+    
+    // Insert pod associations
+    if (pods && pods.length > 0) {
+      const insertPod = db.prepare('INSERT INTO okr_pods (okr_id, pod) VALUES (?, ?)');
+      for (const pod of pods) {
+        insertPod.run(okrId, pod);
+      }
+    }
+
+    const okr = db.prepare('SELECT * FROM okrs WHERE id = ?').get(okrId) as any;
+    const okrPods = db.prepare('SELECT pod FROM okr_pods WHERE okr_id = ?').all(okrId) as any[];
+    res.status(201).json({ 
+      ...rowToOKR(okr, okrPods.map(p => p.pod as Pod)), 
+      keyResults: [] 
+    });
   } catch (error) {
     console.error('Error creating OKR:', error);
     res.status(500).json({ error: 'Failed to create OKR' });
@@ -87,20 +106,43 @@ router.post('/', (req, res) => {
 // PUT /api/okrs/:id - Update OKR
 router.put('/:id', (req, res) => {
   try {
-    const { title, description, timeFrame } = req.body as UpdateOKRInput;
+    const { title, description, timeFrame, isCompanyWide, pods } = req.body as UpdateOKRInput;
     const existing = db.prepare('SELECT * FROM okrs WHERE id = ?').get(req.params.id);
     if (!existing) {
       return res.status(404).json({ error: 'OKR not found' });
     }
 
-    db.prepare(
-      'UPDATE okrs SET title = COALESCE(?, title), description = COALESCE(?, description), time_frame = COALESCE(?, time_frame), updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).run(title, description, timeFrame, req.params.id);
+    const okrId = parseInt(req.params.id);
+    
+    // Update OKR fields
+    if (isCompanyWide !== undefined) {
+      db.prepare(
+        'UPDATE okrs SET title = COALESCE(?, title), description = COALESCE(?, description), time_frame = COALESCE(?, time_frame), is_company_wide = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      ).run(title, description, timeFrame, isCompanyWide ? 1 : 0, okrId);
+    } else {
+      db.prepare(
+        'UPDATE okrs SET title = COALESCE(?, title), description = COALESCE(?, description), time_frame = COALESCE(?, time_frame), updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      ).run(title, description, timeFrame, okrId);
+    }
 
-    const okr = db.prepare('SELECT * FROM okrs WHERE id = ?').get(req.params.id) as any;
-    const keyResults = db.prepare('SELECT * FROM key_results WHERE okr_id = ?').all(okr.id) as any[];
+    // Update pod associations if provided
+    if (pods !== undefined) {
+      // Delete existing pod associations
+      db.prepare('DELETE FROM okr_pods WHERE okr_id = ?').run(okrId);
+      // Insert new pod associations
+      if (pods.length > 0) {
+        const insertPod = db.prepare('INSERT INTO okr_pods (okr_id, pod) VALUES (?, ?)');
+        for (const pod of pods) {
+          insertPod.run(okrId, pod);
+        }
+      }
+    }
+
+    const okr = db.prepare('SELECT * FROM okrs WHERE id = ?').get(okrId) as any;
+    const keyResults = db.prepare('SELECT * FROM key_results WHERE okr_id = ?').all(okrId) as any[];
+    const okrPods = db.prepare('SELECT pod FROM okr_pods WHERE okr_id = ?').all(okrId) as any[];
     res.json({
-      ...rowToOKR(okr),
+      ...rowToOKR(okr, okrPods.map(p => p.pod as Pod)),
       keyResults: keyResults.map(rowToKeyResult),
     });
   } catch (error) {

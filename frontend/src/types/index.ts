@@ -6,6 +6,8 @@ export interface OKR {
   title: string;
   description: string | null;
   timeFrame: string | null;
+  isCompanyWide: boolean;
+  pods: Pod[];
   keyResults?: KeyResult[];
   createdAt: string;
   updatedAt: string;
@@ -42,6 +44,16 @@ export interface CreateOKRInput {
   title: string;
   description?: string;
   timeFrame?: string;
+  isCompanyWide?: boolean;
+  pods?: Pod[];
+}
+
+export interface UpdateOKRInput {
+  title?: string;
+  description?: string;
+  timeFrame?: string;
+  isCompanyWide?: boolean;
+  pods?: Pod[];
 }
 
 export interface CreateInitiativeInput {

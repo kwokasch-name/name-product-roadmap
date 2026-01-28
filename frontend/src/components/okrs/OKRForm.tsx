@@ -5,6 +5,9 @@ import { Textarea } from '../ui/Textarea';
 import { Modal } from '../ui/Modal';
 import { useCreateOKR } from '../../hooks/useOKRs';
 import { useRoadmapContext } from '../../context/RoadmapContext';
+import type { Pod } from '../../types';
+
+const ALL_PODS: Pod[] = ['Retail Therapy', 'JSON ID'];
 
 export function OKRForm() {
   const { isOKRFormOpen, setIsOKRFormOpen } = useRoadmapContext();
@@ -13,22 +16,38 @@ export function OKRForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timeFrame, setTimeFrame] = useState('');
+  const [isCompanyWide, setIsCompanyWide] = useState(false);
+  const [selectedPods, setSelectedPods] = useState<Pod[]>([]);
+
+  const handlePodToggle = (pod: Pod) => {
+    setSelectedPods(prev =>
+      prev.includes(pod) ? prev.filter(p => p !== pod) : [...prev, pod]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!isCompanyWide && selectedPods.length === 0) {
+      alert('Please select at least one pod or mark as company-wide');
+      return;
+    }
 
     createOKR.mutate(
       {
         title: title.trim(),
         description: description.trim() || undefined,
         timeFrame: timeFrame.trim() || undefined,
+        isCompanyWide: isCompanyWide || undefined,
+        pods: selectedPods.length > 0 ? selectedPods : undefined,
       },
       {
         onSuccess: () => {
           setTitle('');
           setDescription('');
           setTimeFrame('');
+          setIsCompanyWide(false);
+          setSelectedPods([]);
           setIsOKRFormOpen(false);
         },
       }
@@ -57,6 +76,41 @@ export function OKRForm() {
           value={timeFrame}
           onChange={(e) => setTimeFrame(e.target.value)}
         />
+        
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Scope
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={isCompanyWide}
+                  onChange={(e) => setIsCompanyWide(e.target.checked)}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Company-wide</span>
+              </label>
+              <div className="ml-6 space-y-2">
+                <p className="text-xs text-gray-500 mb-1">Pods:</p>
+                {ALL_PODS.map((pod) => (
+                  <label key={pod} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedPods.includes(pod)}
+                      onChange={() => handlePodToggle(pod)}
+                      disabled={isCompanyWide}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{pod}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={() => setIsOKRFormOpen(false)}>
             Cancel

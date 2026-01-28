@@ -3,6 +3,7 @@ import { useRoadmapContext } from '../../context/RoadmapContext';
 import { OKRCard } from './OKRCard';
 import { OKRForm } from './OKRForm';
 import { Button } from '../ui/Button';
+import type { OKR } from '../../types';
 
 export function OKRList() {
   const { data: okrs, isLoading } = useOKRs();
@@ -18,7 +19,33 @@ export function OKRList() {
       timeFrameLower.includes('mar') ||
       timeFrameLower.includes('q1')
     );
-  });
+  }) || [];
+
+  // Group OKRs by sections
+  const companyOKRs = filteredOKRs.filter(okr => okr.isCompanyWide);
+  const bothPodsOKRs = filteredOKRs.filter(okr => 
+    !okr.isCompanyWide && okr.pods.length === 2
+  );
+  const retailTherapyOKRs = filteredOKRs.filter(okr => 
+    !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('Retail Therapy')
+  );
+  const jsonIdOKRs = filteredOKRs.filter(okr => 
+    !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('JSON ID')
+  );
+
+  const renderSection = (title: string, okrs: OKR[], sectionId: string) => {
+    if (okrs.length === 0) return null;
+    return (
+      <div key={sectionId} className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2 px-1">{title}</h3>
+        <div className="space-y-2">
+          {okrs.map((okr) => (
+            <OKRCard key={okr.id} okr={okr} />
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -29,18 +56,23 @@ export function OKRList() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3">
+      <div className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="text-sm text-gray-500 text-center py-4">Loading...</div>
         )}
-        {!isLoading && filteredOKRs?.length === 0 && (
+        {!isLoading && filteredOKRs.length === 0 && (
           <div className="text-sm text-gray-500 text-center py-4">
             No OKRs for January - March. Add one to get started.
           </div>
         )}
-        {filteredOKRs?.map((okr) => (
-          <OKRCard key={okr.id} okr={okr} />
-        ))}
+        {!isLoading && filteredOKRs.length > 0 && (
+          <div>
+            {renderSection('Company-wide', companyOKRs, 'company')}
+            {renderSection('Retail Therapy', retailTherapyOKRs, 'retail-therapy')}
+            {renderSection('JSON ID', jsonIdOKRs, 'json-id')}
+            {renderSection('Both Pods', bothPodsOKRs, 'both-pods')}
+          </div>
+        )}
       </div>
 
       <OKRForm />

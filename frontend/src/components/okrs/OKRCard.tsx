@@ -20,11 +20,30 @@ export function OKRCard({ okr }: OKRCardProps) {
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-gray-900 truncate">{okr.title}</h4>
-          {okr.timeFrame && (
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
-              {okr.timeFrame}
-            </span>
-          )}
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {okr.timeFrame && (
+              <span className="inline-block px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
+                {okr.timeFrame}
+              </span>
+            )}
+            {okr.isCompanyWide && (
+              <span className="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                Company
+              </span>
+            )}
+            {okr.pods.map((pod) => (
+              <span
+                key={pod}
+                className={`inline-block px-2 py-0.5 text-xs rounded-full ${
+                  pod === 'Retail Therapy'
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {pod}
+              </span>
+            ))}
+          </div>
         </div>
         <Button
           variant="ghost"

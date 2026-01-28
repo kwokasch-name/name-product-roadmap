@@ -20,6 +20,11 @@ export function initializeDatabase() {
   const schema = readFileSync(schemaPath, 'utf-8');
   db.exec(schema);
   console.log('Database initialized successfully');
+  
+  // Run migrations for existing databases
+  import('./migrate.js').then(({ runMigrations }) => {
+    runMigrations(db);
+  });
 }
 
 export default db;

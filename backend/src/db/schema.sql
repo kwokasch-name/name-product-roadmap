@@ -4,8 +4,19 @@ CREATE TABLE IF NOT EXISTS okrs (
     title TEXT NOT NULL,
     description TEXT,
     time_frame TEXT,
+    is_company_wide INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OKR-Pod junction table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS okr_pods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    okr_id INTEGER NOT NULL,
+    pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE,
+    UNIQUE(okr_id, pod)
 );
 
 -- Key Results table
@@ -43,3 +54,5 @@ CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod);
 CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id);
 CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id);
+CREATE INDEX IF NOT EXISTS idx_okr_pods_okr ON okr_pods(okr_id);
+CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod);
