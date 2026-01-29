@@ -1,14 +1,17 @@
 import type Database from 'better-sqlite3';
 
 export function runMigrations(db: Database.Database) {
-  // Add is_company_wide column if it doesn't exist
+  // Check if is_company_wide column exists
   try {
-    db.prepare('ALTER TABLE okrs ADD COLUMN is_company_wide INTEGER DEFAULT 0').run();
-    console.log('Added is_company_wide column to okrs table');
-  } catch (error: any) {
-    if (!error.message.includes('duplicate column name')) {
-      console.error('Error adding is_company_wide column:', error);
+    const tableInfo = db.prepare("PRAGMA table_info(okrs)").all() as any[];
+    const hasCompanyWideColumn = tableInfo.some(col => col.name === 'is_company_wide');
+    
+    if (!hasCompanyWideColumn) {
+      db.prepare('ALTER TABLE okrs ADD COLUMN is_company_wide INTEGER DEFAULT 0').run();
+      console.log('Added is_company_wide column to okrs table');
     }
+  } catch (error: any) {
+    console.error('Error adding is_company_wide column:', error);
   }
 
   // Create okr_pods junction table if it doesn't exist

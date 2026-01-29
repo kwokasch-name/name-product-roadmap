@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db/database.js';
-import type { OKR, KeyResult, CreateOKRInput, UpdateOKRInput, CreateKeyResultInput, UpdateKeyResultInput } from '../types/index.js';
+import type { OKR, KeyResult, CreateOKRInput, UpdateOKRInput, CreateKeyResultInput, UpdateKeyResultInput, Pod } from '../types/index.js';
 
 const router = Router();
 
@@ -73,13 +73,24 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const { title, description, timeFrame, isCompanyWide, pods } = req.body as CreateOKRInput;
-    if (!title) {
+    
+    if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    // Validate pods if provided
+    if (pods && pods.length > 0) {
+      const validPods: Pod[] = ['Retail Therapy', 'JSON ID'];
+      for (const pod of pods) {
+        if (!validPods.includes(pod)) {
+          return res.status(400).json({ error: `Invalid pod: ${pod}` });
+        }
+      }
     }
     
     const result = db.prepare(
       'INSERT INTO okrs (title, description, time_frame, is_company_wide) VALUES (?, ?, ?, ?)'
-    ).run(title, description || null, timeFrame || null, isCompanyWide ? 1 : 0);
+    ).run(title.trim(), description?.trim() || null, timeFrame?.trim() || null, isCompanyWide ? 1 : 0);
 
     const okrId = result.lastInsertRowid;
     
@@ -87,19 +98,30 @@ router.post('/', (req, res) => {
     if (pods && pods.length > 0) {
       const insertPod = db.prepare('INSERT INTO okr_pods (okr_id, pod) VALUES (?, ?)');
       for (const pod of pods) {
-        insertPod.run(okrId, pod);
+        try {
+          insertPod.run(okrId, pod);
+        } catch (podError: any) {
+          // If pod insertion fails, log but don't fail the whole request
+          console.error(`Error inserting pod ${pod} for OKR ${okrId}:`, podError);
+        }
       }
     }
 
     const okr = db.prepare('SELECT * FROM okrs WHERE id = ?').get(okrId) as any;
+    if (!okr) {
+      return res.status(500).json({ error: 'Failed to retrieve created OKR' });
+    }
+    
     const okrPods = db.prepare('SELECT pod FROM okr_pods WHERE okr_id = ?').all(okrId) as any[];
     res.status(201).json({ 
       ...rowToOKR(okr, okrPods.map(p => p.pod as Pod)), 
       keyResults: [] 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating OKR:', error);
-    res.status(500).json({ error: 'Failed to create OKR' });
+    console.error('Request body:', req.body);
+    const errorMessage = error.message || 'Failed to create OKR';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

@@ -10,7 +10,12 @@
     "setup": "npm run install:all && cd backend && npm run db:init",
     "build": "cd frontend && npm install && npm run build"
   },
+  "dependencies": {
+    "@vercel/node": "^3.0.0",
+    "pg": "^8.11.3"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "@types/pg": "^8.10.9"
   }
 }

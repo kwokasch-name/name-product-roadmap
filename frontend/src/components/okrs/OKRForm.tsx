@@ -64,7 +64,7 @@ export function OKRForm() {
         title: title.trim(),
         description: description.trim() || undefined,
         timeFrame: timeFrame.trim() || undefined,
-        isCompanyWide: isCompanyWide || undefined,
+        isCompanyWide: isCompanyWide,
         pods: selectedPods.length > 0 ? selectedPods : undefined,
       },
       {
