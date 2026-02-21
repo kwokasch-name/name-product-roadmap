@@ -12,10 +12,10 @@ interface RoadmapContextValue {
   setIsOKRFormOpen: (open: boolean) => void;
   isInitiativeFormOpen: boolean;
   setIsInitiativeFormOpen: (open: boolean) => void;
-  selectedOKRIds: Set<number>;
-  setSelectedOKRIds: (ids: Set<number> | ((prev: Set<number>) => Set<number>)) => void;
-  toggleOKRSelection: (id: number) => void;
-  selectAllOKRs: (ids: number[]) => void;
+  selectedOKRIds: Set<string>;
+  setSelectedOKRIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  toggleOKRSelection: (id: string) => void;
+  selectAllOKRs: (ids: string[]) => void;
   deselectAllOKRs: () => void;
 }
 
@@ -28,14 +28,14 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [isOKRFormOpen, setIsOKRFormOpen] = useState(false);
   const [isInitiativeFormOpen, setIsInitiativeFormOpen] = useState(false);
-  const [selectedOKRIds, setSelectedOKRIds] = useState<Set<number>>(new Set());
+  const [selectedOKRIds, setSelectedOKRIds] = useState<Set<string>>(new Set());
 
   const setViewRange = (start: Date, end: Date) => {
     setViewStartDate(start);
     setViewEndDate(end);
   };
 
-  const toggleOKRSelection = (id: number) => {
+  const toggleOKRSelection = (id: string) => {
     setSelectedOKRIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -47,7 +47,7 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const selectAllOKRs = (ids: number[]) => {
+  const selectAllOKRs = (ids: string[]) => {
     setSelectedOKRIds(new Set(ids));
   };
 

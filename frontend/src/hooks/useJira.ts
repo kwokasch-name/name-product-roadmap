@@ -31,7 +31,7 @@ export function useSyncJira() {
 export function useSyncInitiative() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => jiraApi.syncOne(id),
+    mutationFn: (id: string) => jiraApi.syncOne(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['initiatives'] });
     },

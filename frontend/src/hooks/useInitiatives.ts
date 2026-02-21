@@ -36,7 +36,7 @@ export function useCreateInitiative() {
 export function useUpdateInitiative() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateInitiativeInput }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateInitiativeInput }) =>
       initiativeApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['initiatives'] });
@@ -47,7 +47,7 @@ export function useUpdateInitiative() {
 export function useDeleteInitiative() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => initiativeApi.delete(id),
+    mutationFn: (id: string) => initiativeApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['initiatives'] });
     },

@@ -32,16 +32,16 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // OKR API
 export const okrApi = {
   getAll: () => fetchJson<OKR[]>(`${BASE_URL}/okrs`),
-  getById: (id: number) => fetchJson<OKR>(`${BASE_URL}/okrs/${id}`),
+  getById: (id: string) => fetchJson<OKR>(`${BASE_URL}/okrs/${id}`),
   create: (data: CreateOKRInput) => fetchJson<OKR>(`${BASE_URL}/okrs`, {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: Partial<CreateOKRInput>) => fetchJson<OKR>(`${BASE_URL}/okrs/${id}`, {
+  update: (id: string, data: Partial<CreateOKRInput>) => fetchJson<OKR>(`${BASE_URL}/okrs/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => fetchJson<void>(`${BASE_URL}/okrs/${id}`, {
+  delete: (id: string) => fetchJson<void>(`${BASE_URL}/okrs/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -51,7 +51,7 @@ export const jiraApi = {
   status: () => fetchJson<{ configured: boolean }>(`${BASE_URL}/jira/status`),
   searchEpics: (q: string) => fetchJson<JiraEpic[]>(`${BASE_URL}/jira/search?q=${encodeURIComponent(q)}`),
   sync: () => fetchJson<{ synced: number; failed: number; total: number }>(`${BASE_URL}/jira/sync`, { method: 'POST' }),
-  syncOne: (id: number) => fetchJson<void>(`${BASE_URL}/jira/sync`, {
+  syncOne: (id: string) => fetchJson<void>(`${BASE_URL}/jira/sync`, {
     method: 'POST',
     body: JSON.stringify({ id }),
   }),
@@ -62,16 +62,16 @@ export const initiativeApi = {
   getAll: () => fetchJson<Initiative[]>(`${BASE_URL}/initiatives`),
   getScoped: () => fetchJson<Initiative[]>(`${BASE_URL}/initiatives/scoped`),
   getUnscoped: () => fetchJson<Initiative[]>(`${BASE_URL}/initiatives/unscoped`),
-  getById: (id: number) => fetchJson<Initiative>(`${BASE_URL}/initiatives/${id}`),
+  getById: (id: string) => fetchJson<Initiative>(`${BASE_URL}/initiatives/${id}`),
   create: (data: CreateInitiativeInput) => fetchJson<Initiative>(`${BASE_URL}/initiatives`, {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: UpdateInitiativeInput) => fetchJson<Initiative>(`${BASE_URL}/initiatives/${id}`, {
+  update: (id: string, data: UpdateInitiativeInput) => fetchJson<Initiative>(`${BASE_URL}/initiatives/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => fetchJson<void>(`${BASE_URL}/initiatives/${id}`, {
+  delete: (id: string) => fetchJson<void>(`${BASE_URL}/initiatives/${id}`, {
     method: 'DELETE',
   }),
 };

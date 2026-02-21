@@ -22,7 +22,7 @@ export function useCreateOKR() {
 export function useUpdateOKR() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CreateOKRInput> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateOKRInput> }) =>
       okrApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['okrs'] });
@@ -33,7 +33,7 @@ export function useUpdateOKR() {
 export function useDeleteOKR() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => okrApi.delete(id),
+    mutationFn: (id: string) => okrApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['okrs'] });
       queryClient.invalidateQueries({ queryKey: ['initiatives'] });
