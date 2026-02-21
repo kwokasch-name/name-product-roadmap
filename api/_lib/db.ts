@@ -50,6 +50,9 @@ export function getDatabase(): Pool {
             await initializeSchema(client);
           }
         }
+
+        // Always run migrations to add new columns to existing tables
+        await runMigrations(client);
       } finally {
         client.release();
       }
@@ -127,6 +130,19 @@ async function initializeSchema(client: any) {
   `;
   
   await client.query(schema);
+}
+
+async function runMigrations(client: any) {
+  // Add Jira columns to initiatives if they don't exist
+  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`);
+  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`);
+  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`);
+  // Add unique index on jira_epic_key if not already present
+  await client.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key
+    ON initiatives (jira_epic_key)
+    WHERE jira_epic_key IS NOT NULL
+  `);
 }
 
 // Helper to set CORS headers
