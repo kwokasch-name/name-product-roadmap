@@ -24,11 +24,12 @@ async function ensureSchema(p: Pool): Promise<void> {
   try {
     await client.query('BEGIN');
 
-    // Create tables without inline foreign key constraints to avoid
-    // "cannot be implemented" errors on repeated cold starts
+    // Enable uuid-ossp extension for UUID generation
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS okrs (
-        id SERIAL PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         title TEXT NOT NULL,
         description TEXT,
         time_frame TEXT,
@@ -40,8 +41,8 @@ async function ensureSchema(p: Pool): Promise<void> {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS okr_pods (
-        id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        okr_id UUID NOT NULL,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(okr_id, pod)
@@ -50,8 +51,8 @@ async function ensureSchema(p: Pool): Promise<void> {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS key_results (
-        id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        okr_id UUID NOT NULL,
         title TEXT NOT NULL,
         target_value REAL,
         current_value REAL DEFAULT 0,
@@ -63,13 +64,13 @@ async function ensureSchema(p: Pool): Promise<void> {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS initiatives (
-        id SERIAL PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         title TEXT NOT NULL,
         description TEXT,
         start_date DATE,
         end_date DATE,
         developer_count INTEGER DEFAULT 1,
-        okr_id INTEGER,
+        okr_id UUID,
         success_criteria TEXT,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),

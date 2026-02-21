@@ -4,7 +4,7 @@ import { isJiraConfigured, getEpic, mapEpicToInitiativeFields } from '../_lib/ji
 
 const SYNC_STALE_MINUTES = 15;
 
-async function syncInitiativeFromJira(initiativeId: number, epicKey: string) {
+async function syncInitiativeFromJira(initiativeId: string, epicKey: string) {
   const epic = await getEpic(epicKey);
   const fields = mapEpicToInitiativeFields(epic);
 

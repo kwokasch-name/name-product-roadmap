@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { title, description, timeFrame, isCompanyWide, pods } = req.body as UpdateOKRInput;
-      const okrId = parseInt(id as string);
+      const okrId = id as string;
       
       // Build update query
       const updates: string[] = [];
