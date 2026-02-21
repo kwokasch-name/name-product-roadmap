@@ -146,7 +146,7 @@ export function InitiativeForm() {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       developerCount: parseInt(developerCount) || 1,
-      okrId: okrId ? parseInt(okrId) : undefined,
+      okrId: okrId || undefined,
       successCriteria: successCriteria.trim() || undefined,
       status,
       jiraEpicKey: jiraEpicKey || undefined,

@@ -2,7 +2,7 @@ export type Pod = 'Retail Therapy' | 'JSON ID';
 export type InitiativeStatus = 'planned' | 'in_progress' | 'completed' | 'blocked';
 
 export interface OKR {
-  id: number;
+  id: string;
   title: string;
   description: string | null;
   timeFrame: string | null;
@@ -14,8 +14,8 @@ export interface OKR {
 }
 
 export interface KeyResult {
-  id: number;
-  okrId: number;
+  id: string;
+  okrId: string;
   title: string;
   targetValue: number | null;
   currentValue: number;
@@ -25,13 +25,13 @@ export interface KeyResult {
 }
 
 export interface Initiative {
-  id: number;
+  id: string;
   title: string;
   description: string | null;
   startDate: string | null;
   endDate: string | null;
   developerCount: number;
-  okrId: number | null;
+  okrId: string | null;
   okr?: OKR;
   successCriteria: string | null;
   pod: Pod;
@@ -69,14 +69,6 @@ export interface UpdateOKRInput {
   pods?: Pod[];
 }
 
-export interface UpdateOKRInput {
-  title?: string;
-  description?: string;
-  timeFrame?: string;
-  isCompanyWide?: boolean;
-  pods?: Pod[];
-}
-
 export interface CreateKeyResultInput {
   title: string;
   targetValue?: number;
@@ -97,7 +89,7 @@ export interface CreateInitiativeInput {
   startDate?: string;
   endDate?: string;
   developerCount?: number;
-  okrId?: number;
+  okrId?: string;
   successCriteria?: string;
   pod: Pod;
   status?: InitiativeStatus;
@@ -111,7 +103,7 @@ export interface UpdateInitiativeInput {
   startDate?: string | null;
   endDate?: string | null;
   developerCount?: number;
-  okrId?: number | null;
+  okrId?: string | null;
   successCriteria?: string;
   pod?: Pod;
   status?: InitiativeStatus;

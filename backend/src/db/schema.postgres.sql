@@ -1,6 +1,9 @@
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- OKRs table
 CREATE TABLE IF NOT EXISTS okrs (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     description TEXT,
     time_frame TEXT,
@@ -11,8 +14,8 @@ CREATE TABLE IF NOT EXISTS okrs (
 
 -- OKR-Pod junction table (many-to-many relationship)
 CREATE TABLE IF NOT EXISTS okr_pods (
-    id SERIAL PRIMARY KEY,
-    okr_id INTEGER NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    okr_id UUID NOT NULL,
     pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE,
@@ -21,8 +24,8 @@ CREATE TABLE IF NOT EXISTS okr_pods (
 
 -- Key Results table
 CREATE TABLE IF NOT EXISTS key_results (
-    id SERIAL PRIMARY KEY,
-    okr_id INTEGER NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    okr_id UUID NOT NULL,
     title TEXT NOT NULL,
     target_value REAL,
     current_value REAL DEFAULT 0,
@@ -34,13 +37,13 @@ CREATE TABLE IF NOT EXISTS key_results (
 
 -- Initiatives table
 CREATE TABLE IF NOT EXISTS initiatives (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     description TEXT,
     start_date DATE,
     end_date DATE,
     developer_count INTEGER DEFAULT 1,
-    okr_id INTEGER,
+    okr_id UUID,
     success_criteria TEXT,
     pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
     status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
@@ -59,3 +62,4 @@ CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id);
 CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id);
 CREATE INDEX IF NOT EXISTS idx_okr_pods_okr ON okr_pods(okr_id);
 CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives(jira_epic_key) WHERE jira_epic_key IS NOT NULL;

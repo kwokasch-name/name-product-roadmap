@@ -38,7 +38,7 @@ export interface CreateInitiativeInput {
   startDate?: string;
   endDate?: string;
   developerCount?: number;
-  okrId?: number;
+  okrId?: string;
   successCriteria?: string;
   pod: Pod;
   status?: InitiativeStatus;
@@ -52,7 +52,7 @@ export interface UpdateInitiativeInput {
   startDate?: string | null;
   endDate?: string | null;
   developerCount?: number;
-  okrId?: number | null;
+  okrId?: string | null;
   successCriteria?: string;
   pod?: Pod;
   status?: InitiativeStatus;

@@ -134,7 +134,7 @@ router.put('/:id', (req, res) => {
       return res.status(404).json({ error: 'OKR not found' });
     }
 
-    const okrId = parseInt(req.params.id);
+    const okrId = req.params.id;
     
     // Update OKR fields
     if (isCompanyWide !== undefined) {
