@@ -22,7 +22,10 @@ function createPool(): Pool {
 async function ensureSchema(p: Pool): Promise<void> {
   const client = await p.connect();
   try {
-    // Create all tables
+    await client.query('BEGIN');
+
+    // Create tables without inline foreign key constraints to avoid
+    // "cannot be implemented" errors on repeated cold starts
     await client.query(`
       CREATE TABLE IF NOT EXISTS okrs (
         id SERIAL PRIMARY KEY,
@@ -38,7 +41,7 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS okr_pods (
         id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL REFERENCES okrs(id) ON DELETE CASCADE,
+        okr_id INTEGER NOT NULL,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(okr_id, pod)
@@ -48,7 +51,7 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS key_results (
         id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL REFERENCES okrs(id) ON DELETE CASCADE,
+        okr_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         target_value REAL,
         current_value REAL DEFAULT 0,
@@ -66,7 +69,7 @@ async function ensureSchema(p: Pool): Promise<void> {
         start_date DATE,
         end_date DATE,
         developer_count INTEGER DEFAULT 1,
-        okr_id INTEGER REFERENCES okrs(id) ON DELETE SET NULL,
+        okr_id INTEGER,
         success_criteria TEXT,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
@@ -87,12 +90,16 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod)`);
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives(jira_epic_key) WHERE jira_epic_key IS NOT NULL`);
 
-    // Migrations: add Jira columns to existing tables that predate them
+    // Migrations: safely add Jira columns to databases that predate them
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`);
 
+    await client.query('COMMIT');
     console.log('Schema ready');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
   } finally {
     client.release();
   }
