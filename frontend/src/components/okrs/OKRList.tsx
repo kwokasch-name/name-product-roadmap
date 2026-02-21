@@ -9,17 +9,8 @@ export function OKRList() {
   const { data: okrs, isLoading } = useOKRs();
   const { setIsOKRFormOpen, selectedOKRIds, selectAllOKRs, deselectAllOKRs } = useRoadmapContext();
 
-  // Filter OKRs to only show January - March
-  const filteredOKRs = okrs?.filter((okr) => {
-    if (!okr.timeFrame) return false;
-    const timeFrameLower = okr.timeFrame.toLowerCase();
-    return (
-      timeFrameLower.includes('jan') ||
-      timeFrameLower.includes('feb') ||
-      timeFrameLower.includes('mar') ||
-      timeFrameLower.includes('q1')
-    );
-  }) || [];
+  // Show all OKRs
+  const filteredOKRs = okrs || [];
 
   // Group OKRs by sections
   const companyOKRs = filteredOKRs.filter(okr => okr.isCompanyWide);
@@ -29,8 +20,11 @@ export function OKRList() {
   const retailTherapyOKRs = filteredOKRs.filter(okr => 
     !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('Retail Therapy')
   );
-  const jsonIdOKRs = filteredOKRs.filter(okr => 
+  const jsonIdOKRs = filteredOKRs.filter(okr =>
     !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('JSON ID')
+  );
+  const ungroupedOKRs = filteredOKRs.filter(okr =>
+    !okr.isCompanyWide && (!okr.pods || okr.pods.length === 0)
   );
 
   const renderSection = (title: string, okrs: OKR[], sectionId: string) => {
@@ -84,7 +78,7 @@ export function OKRList() {
         )}
         {!isLoading && filteredOKRs.length === 0 && (
           <div className="text-sm text-gray-500 text-center py-4">
-            No OKRs for January - March. Add one to get started.
+            No OKRs yet. Add one to get started.
           </div>
         )}
         {!isLoading && filteredOKRs.length > 0 && (
@@ -93,6 +87,7 @@ export function OKRList() {
             {renderSection('Retail Therapy', retailTherapyOKRs, 'retail-therapy')}
             {renderSection('JSON ID', jsonIdOKRs, 'json-id')}
             {renderSection('Both Pods', bothPodsOKRs, 'both-pods')}
+            {renderSection('Other', ungroupedOKRs, 'ungrouped')}
           </div>
         )}
       </div>
