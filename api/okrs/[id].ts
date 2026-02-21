@@ -126,7 +126,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       await query('DELETE FROM okrs WHERE id = $1', [id]);
-      return res.status(204).send();
+      return res.status(204).send('');
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
