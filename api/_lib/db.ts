@@ -1,77 +1,30 @@
 import { Pool, QueryResult } from 'pg';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 
 // PostgreSQL connection pool
 let pool: Pool | null = null;
+let schemaReady: Promise<void> | null = null;
 
-export function getDatabase(): Pool {
-  if (pool) {
-    return pool;
-  }
-
-  // Get connection string from environment
+function createPool(): Pool {
   const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  
   if (!databaseUrl) {
     throw new Error('DATABASE_URL or POSTGRES_URL environment variable is required');
   }
 
-  pool = new Pool({
+  return new Pool({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
-    max: 20, // Maximum number of clients in the pool
+    ssl: { rejectUnauthorized: false },
+    max: 5,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 5000,
   });
-
-  // Initialize schema once
-  (async () => {
-    try {
-      const client = await pool!.connect();
-      try {
-        // Check if tables exist
-        const tableCheck = await client.query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_name = 'okrs'
-          );
-        `);
-        
-        if (!tableCheck.rows[0].exists) {
-          // Initialize schema
-          const schemaPath = join(process.cwd(), 'backend/src/db/schema.postgres.sql');
-          if (existsSync(schemaPath)) {
-            const schema = readFileSync(schemaPath, 'utf-8');
-            await client.query(schema);
-            console.log('PostgreSQL schema initialized');
-          } else {
-            // Fallback: create schema inline
-            await initializeSchema(client);
-          }
-        }
-
-        // Always run migrations to add new columns to existing tables
-        try {
-          await runMigrations(client);
-        } catch (migrationError) {
-          console.error('Error running migrations:', migrationError);
-        }
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('Error initializing schema:', error);
-    }
-  })();
-
-  return pool;
 }
 
-async function initializeSchema(client: any) {
-  const schema = `
-    -- OKRs table
-    CREATE TABLE IF NOT EXISTS okrs (
+async function ensureSchema(p: Pool): Promise<void> {
+  const client = await p.connect();
+  try {
+    // Create all tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS okrs (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT,
@@ -79,89 +32,84 @@ async function initializeSchema(client: any) {
         is_company_wide BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+      )
+    `);
 
-    -- OKR-Pod junction table
-    CREATE TABLE IF NOT EXISTS okr_pods (
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS okr_pods (
         id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL,
+        okr_id INTEGER NOT NULL REFERENCES okrs(id) ON DELETE CASCADE,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE,
         UNIQUE(okr_id, pod)
-    );
+      )
+    `);
 
-    -- Key Results table
-    CREATE TABLE IF NOT EXISTS key_results (
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS key_results (
         id SERIAL PRIMARY KEY,
-        okr_id INTEGER NOT NULL,
+        okr_id INTEGER NOT NULL REFERENCES okrs(id) ON DELETE CASCADE,
         title TEXT NOT NULL,
         target_value REAL,
         current_value REAL DEFAULT 0,
         unit TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE
-    );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-    -- Initiatives table
-    CREATE TABLE IF NOT EXISTS initiatives (
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS initiatives (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT,
         start_date DATE,
         end_date DATE,
         developer_count INTEGER DEFAULT 1,
-        okr_id INTEGER,
+        okr_id INTEGER REFERENCES okrs(id) ON DELETE SET NULL,
         success_criteria TEXT,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
         status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
-        jira_epic_key TEXT UNIQUE,
+        jira_epic_key TEXT,
         jira_sync_enabled BOOLEAN DEFAULT TRUE,
         jira_last_synced_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE SET NULL
-    );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-    -- Indexes
-    CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod);
-    CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date);
-    CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id);
-    CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id);
-    CREATE INDEX IF NOT EXISTS idx_okr_pods_okr ON okr_pods(okr_id);
-    CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod);
-  `;
-  
-  await client.query(schema);
+    // Indexes
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_okr_pods_okr ON okr_pods(okr_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod)`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives(jira_epic_key) WHERE jira_epic_key IS NOT NULL`);
+
+    // Migrations: add Jira columns to existing tables that predate them
+    await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`);
+    await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`);
+    await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`);
+
+    console.log('Schema ready');
+  } finally {
+    client.release();
+  }
 }
 
-async function runMigrations(client: any) {
-  // Check the table exists before attempting column migrations
-  const check = await client.query(`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables WHERE table_name = 'initiatives'
-    )
-  `);
-  if (!check.rows[0].exists) return;
-
-  // Add Jira columns to initiatives if they don't exist
-  const migrations = [
-    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`,
-    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`,
-    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives (jira_epic_key) WHERE jira_epic_key IS NOT NULL`,
-  ];
-  for (const sql of migrations) {
-    try {
-      await client.query(sql);
-    } catch (err: any) {
-      // Ignore "already exists" errors, log anything unexpected
-      if (!err.message?.includes('already exists')) {
-        console.error('Migration error:', err.message);
-      }
-    }
+function getPool(): Pool {
+  if (!pool) {
+    pool = createPool();
+    schemaReady = ensureSchema(pool).catch(err => {
+      console.error('Schema init failed:', err);
+      // Reset so next request retries
+      pool = null;
+      schemaReady = null;
+      throw err;
+    });
   }
+  return pool;
 }
 
 // Helper to set CORS headers
@@ -172,8 +120,15 @@ export function setCorsHeaders(res: any, methods: string = 'GET,POST,PUT,DELETE,
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-// Helper to execute queries (returns the result directly)
+// Helper to execute queries — waits for schema before running
 export async function query(text: string, params?: any[]): Promise<QueryResult> {
-  const db = getDatabase();
-  return db.query(text, params);
+  const p = getPool();
+  // Wait for schema to be ready before executing any query
+  if (schemaReady) await schemaReady;
+  return p.query(text, params);
+}
+
+// Keep getDatabase export for any existing references
+export function getDatabase(): Pool {
+  return getPool();
 }
