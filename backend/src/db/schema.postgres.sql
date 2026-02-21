@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS initiatives (
     success_criteria TEXT,
     pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
     status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
+    jira_epic_key TEXT UNIQUE,
+    jira_sync_enabled BOOLEAN DEFAULT TRUE,
+    jira_last_synced_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE SET NULL

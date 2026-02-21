@@ -14,6 +14,9 @@ function rowToInitiative(row: any) {
     successCriteria: row.success_criteria,
     pod: row.pod,
     status: row.status,
+    jiraEpicKey: row.jira_epic_key ?? null,
+    jiraSyncEnabled: Boolean(row.jira_sync_enabled ?? true),
+    jiraLastSyncedAt: row.jira_last_synced_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -68,7 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Initiative not found' });
       }
 
-      const { title, description, startDate, endDate, developerCount, okrId, successCriteria, pod, status } = req.body as UpdateInitiativeInput;
+      const existing = existingResult.rows[0];
+      const { title, description, startDate, endDate, developerCount, okrId, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as UpdateInitiativeInput;
 
       if (pod && !['Retail Therapy', 'JSON ID'].includes(pod)) {
         return res.status(400).json({ error: 'Pod must be "Retail Therapy" or "JSON ID"' });
@@ -78,50 +82,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const params: any[] = [];
       let paramIndex = 1;
 
-      if (title !== undefined) {
-        updates.push(`title = $${paramIndex++}`);
-        params.push(title);
-      }
-      if (description !== undefined) {
-        updates.push(`description = $${paramIndex++}`);
-        params.push(description);
-      }
-      if (startDate !== undefined) {
-        updates.push(`start_date = $${paramIndex++}`);
-        params.push(startDate);
-      }
-      if (endDate !== undefined) {
-        updates.push(`end_date = $${paramIndex++}`);
-        params.push(endDate);
-      }
-      if (developerCount !== undefined) {
-        updates.push(`developer_count = $${paramIndex++}`);
-        params.push(developerCount);
-      }
-      if (okrId !== undefined) {
-        updates.push(`okr_id = $${paramIndex++}`);
-        params.push(okrId);
-      }
-      if (successCriteria !== undefined) {
-        updates.push(`success_criteria = $${paramIndex++}`);
-        params.push(successCriteria);
-      }
-      if (pod !== undefined) {
-        updates.push(`pod = $${paramIndex++}`);
-        params.push(pod);
-      }
-      if (status !== undefined) {
-        updates.push(`status = $${paramIndex++}`);
-        params.push(status);
-      }
+      if (title !== undefined) { updates.push(`title = $${paramIndex++}`); params.push(title); }
+      if (description !== undefined) { updates.push(`description = $${paramIndex++}`); params.push(description); }
+      if (startDate !== undefined) { updates.push(`start_date = $${paramIndex++}`); params.push(startDate); }
+      if (endDate !== undefined) { updates.push(`end_date = $${paramIndex++}`); params.push(endDate); }
+      if (developerCount !== undefined) { updates.push(`developer_count = $${paramIndex++}`); params.push(developerCount); }
+      if (okrId !== undefined) { updates.push(`okr_id = $${paramIndex++}`); params.push(okrId); }
+      if (successCriteria !== undefined) { updates.push(`success_criteria = $${paramIndex++}`); params.push(successCriteria); }
+      if (pod !== undefined) { updates.push(`pod = $${paramIndex++}`); params.push(pod); }
+      if (status !== undefined) { updates.push(`status = $${paramIndex++}`); params.push(status); }
+      if (jiraEpicKey !== undefined) { updates.push(`jira_epic_key = $${paramIndex++}`); params.push(jiraEpicKey); }
+      if (jiraSyncEnabled !== undefined) { updates.push(`jira_sync_enabled = $${paramIndex++}`); params.push(jiraSyncEnabled); }
 
       if (updates.length > 0) {
         updates.push('updated_at = CURRENT_TIMESTAMP');
         params.push(id);
-        await query(
-          `UPDATE initiatives SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-          params
-        );
+        await query(`UPDATE initiatives SET ${updates.join(', ')} WHERE id = $${paramIndex}`, params);
       }
 
       const result = await query('SELECT * FROM initiatives WHERE id = $1', [id]);

@@ -42,6 +42,8 @@ export interface CreateInitiativeInput {
   successCriteria?: string;
   pod: Pod;
   status?: InitiativeStatus;
+  jiraEpicKey?: string;
+  jiraSyncEnabled?: boolean;
 }
 
 export interface UpdateInitiativeInput {
@@ -54,4 +56,16 @@ export interface UpdateInitiativeInput {
   successCriteria?: string;
   pod?: Pod;
   status?: InitiativeStatus;
+  jiraEpicKey?: string | null;
+  jiraSyncEnabled?: boolean;
+}
+
+export interface JiraEpic {
+  key: string;
+  summary: string;
+  description: string | null;
+  status: string;
+  startDate: string | null;
+  dueDate: string | null;
+  url: string;
 }

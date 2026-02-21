@@ -1,4 +1,4 @@
-import type { OKR, Initiative, CreateOKRInput, CreateInitiativeInput, UpdateInitiativeInput } from '../types';
+import type { OKR, Initiative, CreateOKRInput, CreateInitiativeInput, UpdateInitiativeInput, JiraEpic } from '../types';
 
 const BASE_URL = '/api';
 
@@ -43,6 +43,17 @@ export const okrApi = {
   }),
   delete: (id: number) => fetchJson<void>(`${BASE_URL}/okrs/${id}`, {
     method: 'DELETE',
+  }),
+};
+
+// Jira API
+export const jiraApi = {
+  status: () => fetchJson<{ configured: boolean }>(`${BASE_URL}/jira/status`),
+  searchEpics: (q: string) => fetchJson<JiraEpic[]>(`${BASE_URL}/jira/search?q=${encodeURIComponent(q)}`),
+  sync: () => fetchJson<{ synced: number; failed: number; total: number }>(`${BASE_URL}/jira/sync`, { method: 'POST' }),
+  syncOne: (id: number) => fetchJson<void>(`${BASE_URL}/jira/sync`, {
+    method: 'POST',
+    body: JSON.stringify({ id }),
   }),
 };
 

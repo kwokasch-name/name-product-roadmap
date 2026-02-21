@@ -41,4 +41,26 @@ export function runMigrations(db: Database.Database) {
   } catch (error) {
     console.error('Error creating indexes:', error);
   }
+
+  // Add Jira integration columns to initiatives
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info(initiatives)").all() as any[];
+    const columns = tableInfo.map((col: any) => col.name);
+
+    if (!columns.includes('jira_epic_key')) {
+      db.prepare('ALTER TABLE initiatives ADD COLUMN jira_epic_key TEXT').run();
+      db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives(jira_epic_key) WHERE jira_epic_key IS NOT NULL').run();
+      console.log('Added jira_epic_key column to initiatives table');
+    }
+    if (!columns.includes('jira_sync_enabled')) {
+      db.prepare('ALTER TABLE initiatives ADD COLUMN jira_sync_enabled INTEGER DEFAULT 1').run();
+      console.log('Added jira_sync_enabled column to initiatives table');
+    }
+    if (!columns.includes('jira_last_synced_at')) {
+      db.prepare('ALTER TABLE initiatives ADD COLUMN jira_last_synced_at DATETIME').run();
+      console.log('Added jira_last_synced_at column to initiatives table');
+    }
+  } catch (error: any) {
+    console.error('Error adding Jira columns to initiatives:', error);
+  }
 }
