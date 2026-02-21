@@ -52,7 +52,11 @@ export function getDatabase(): Pool {
         }
 
         // Always run migrations to add new columns to existing tables
-        await runMigrations(client);
+        try {
+          await runMigrations(client);
+        } catch (migrationError) {
+          console.error('Error running migrations:', migrationError);
+        }
       } finally {
         client.release();
       }
@@ -133,16 +137,31 @@ async function initializeSchema(client: any) {
 }
 
 async function runMigrations(client: any) {
-  // Add Jira columns to initiatives if they don't exist
-  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`);
-  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`);
-  await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`);
-  // Add unique index on jira_epic_key if not already present
-  await client.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key
-    ON initiatives (jira_epic_key)
-    WHERE jira_epic_key IS NOT NULL
+  // Check the table exists before attempting column migrations
+  const check = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables WHERE table_name = 'initiatives'
+    )
   `);
+  if (!check.rows[0].exists) return;
+
+  // Add Jira columns to initiatives if they don't exist
+  const migrations = [
+    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_epic_key TEXT`,
+    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_sync_enabled BOOLEAN DEFAULT TRUE`,
+    `ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_initiatives_jira_key ON initiatives (jira_epic_key) WHERE jira_epic_key IS NOT NULL`,
+  ];
+  for (const sql of migrations) {
+    try {
+      await client.query(sql);
+    } catch (err: any) {
+      // Ignore "already exists" errors, log anything unexpected
+      if (!err.message?.includes('already exists')) {
+        console.error('Migration error:', err.message);
+      }
+    }
+  }
 }
 
 // Helper to set CORS headers
