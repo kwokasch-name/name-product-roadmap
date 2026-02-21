@@ -19,6 +19,45 @@ function createPool(): Pool {
   });
 }
 
+async function migrateIntegerColumnsToUuid(p: Pool): Promise<void> {
+  // Check and migrate each okr_id column that is still INTEGER type.
+  // These columns reference okrs.id which is UUID, so they must also be UUID.
+  // Old rows with integer okr_id values are cleared (set to NULL) since they
+  // refer to rows that no longer exist after the UUID migration.
+  const columnsToMigrate: Array<{ table: string; column: string; constraint?: string }> = [
+    { table: 'okr_pods', column: 'okr_id', constraint: 'okr_pods_okr_id_fkey' },
+    { table: 'key_results', column: 'okr_id', constraint: 'key_results_okr_id_fkey' },
+    { table: 'initiatives', column: 'okr_id', constraint: 'initiatives_okr_id_fkey' },
+  ];
+
+  for (const { table, column, constraint } of columnsToMigrate) {
+    const client = await p.connect();
+    try {
+      const typeResult = await client.query(
+        `SELECT data_type FROM information_schema.columns
+         WHERE table_name = $1 AND column_name = $2`,
+        [table, column]
+      );
+      if (typeResult.rows[0]?.data_type !== 'integer') continue;
+
+      console.log(`Migrating ${table}.${column} from INTEGER to UUID...`);
+      // Drop FK constraint if it exists
+      if (constraint) {
+        await client.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${constraint}`);
+      }
+      // Set all existing integer values to NULL (they reference old integer PKs that no longer exist)
+      await client.query(`UPDATE ${table} SET ${column} = NULL WHERE ${column} IS NOT NULL`);
+      // Change column type to UUID
+      await client.query(`ALTER TABLE ${table} ALTER COLUMN ${column} TYPE UUID USING ${column}::text::uuid`);
+      console.log(`${table}.${column} migrated to UUID`);
+    } catch (err) {
+      console.error(`Failed to migrate ${table}.${column}:`, err);
+    } finally {
+      client.release();
+    }
+  }
+}
+
 async function ensureSchema(p: Pool): Promise<void> {
   const client = await p.connect();
   try {
@@ -97,13 +136,18 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS jira_last_synced_at TIMESTAMP`);
 
     await client.query('COMMIT');
-    console.log('Schema ready');
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
   }
+
+  // Migrate okr_id columns from INTEGER to UUID — runs in its own connections
+  // outside the main transaction (ALTER COLUMN TYPE cannot run inside a transaction
+  // that also does DDL like CREATE TABLE IF NOT EXISTS in some PG versions)
+  await migrateIntegerColumnsToUuid(p);
+  console.log('Schema ready');
 }
 
 function getPool(): Pool {
