@@ -19,6 +19,31 @@ function createPool(): Pool {
   });
 }
 
+async function migrateNameColumnToTitle(p: Pool): Promise<void> {
+  // Some older deployments created tables with 'name' instead of 'title'.
+  // Rename them so all queries can use 'title' consistently.
+  const tablesToCheck = ['okrs', 'initiatives', 'key_results'];
+  for (const table of tablesToCheck) {
+    const client = await p.connect();
+    try {
+      const nameColResult = await client.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = $1 AND column_name = 'name'`,
+        [table]
+      );
+      if (nameColResult.rows.length > 0) {
+        console.log(`Renaming ${table}.name -> ${table}.title`);
+        await client.query(`ALTER TABLE ${table} RENAME COLUMN name TO title`);
+        console.log(`${table}.name renamed to title`);
+      }
+    } catch (err) {
+      console.error(`Failed to rename ${table}.name:`, err);
+    } finally {
+      client.release();
+    }
+  }
+}
+
 async function migrateIntegerColumnsToUuid(p: Pool): Promise<void> {
   // Check and migrate each okr_id column that is still INTEGER type.
   // These columns reference okrs.id which is UUID, so they must also be UUID.
@@ -173,6 +198,9 @@ async function ensureSchema(p: Pool): Promise<void> {
   } finally {
     client.release();
   }
+
+  // Rename 'name' → 'title' if the old schema used 'name' (runs outside main transaction)
+  await migrateNameColumnToTitle(p);
 
   // Migrate okr_id columns from INTEGER to UUID — runs in its own connections
   // outside the main transaction (ALTER COLUMN TYPE cannot run inside a transaction
