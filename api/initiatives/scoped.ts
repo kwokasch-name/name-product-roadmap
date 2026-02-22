@@ -26,11 +26,17 @@ function rowToInitiative(row: any) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function enrichWithOKRs(initiative: any) {
+  // Skip junction table lookup if the initiative ID is not a valid UUID (legacy integer ID)
+  if (!UUID_RE.test(initiative.id)) {
+    initiative.okrIds = [];
+    initiative.okrs = [];
+    return initiative;
+  }
+
   const ioResult = await query(
     `SELECT okr_id FROM initiative_okrs WHERE initiative_id = $1 ORDER BY position ASC`,
     [initiative.id]
   );
-  // Filter out any non-UUID okr_id values (legacy integer IDs from migration)
   const okrIds = ioResult.rows.map((r: any) => r.okr_id).filter((id: string) => UUID_RE.test(id));
   initiative.okrIds = okrIds;
 

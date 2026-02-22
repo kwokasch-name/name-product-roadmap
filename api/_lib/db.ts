@@ -112,6 +112,37 @@ async function migrateIntegerColumnsToUuid(p: Pool): Promise<void> {
   }
 }
 
+async function migratePrimaryKeysToUuid(p: Pool): Promise<void> {
+  // If any core table still has an integer primary key, migrate it to UUID.
+  // Old integer-ID rows are deleted since they can't be converted to valid UUIDs.
+  const tables = ['okrs', 'initiatives'];
+  for (const table of tables) {
+    const client = await p.connect();
+    try {
+      const typeResult = await client.query(
+        `SELECT data_type FROM information_schema.columns
+         WHERE table_name = $1 AND column_name = 'id'`,
+        [table]
+      );
+      if (!typeResult.rows[0] || typeResult.rows[0].data_type === 'uuid') continue;
+
+      console.log(`Migrating ${table}.id from ${typeResult.rows[0].data_type} to UUID...`);
+      // Delete all rows — integer IDs can't be converted to valid UUIDs
+      await client.query(`DELETE FROM ${table}`);
+      // Drop the primary key constraint and change column type
+      await client.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_pkey`);
+      await client.query(`ALTER TABLE ${table} ALTER COLUMN id SET DEFAULT uuid_generate_v4()`);
+      await client.query(`ALTER TABLE ${table} ALTER COLUMN id TYPE UUID USING uuid_generate_v4()`);
+      await client.query(`ALTER TABLE ${table} ADD PRIMARY KEY (id)`);
+      console.log(`${table}.id migrated to UUID`);
+    } catch (err) {
+      console.error(`Failed to migrate ${table}.id to UUID:`, err);
+    } finally {
+      client.release();
+    }
+  }
+}
+
 async function cleanupInvalidJunctionRows(p: Pool): Promise<void> {
   // Remove initiative_okrs rows where the okr_id doesn't match a real OKR.
   // This handles cases where old integer IDs (e.g. "1") were copied during migration.
@@ -287,6 +318,9 @@ async function ensureSchema(p: Pool): Promise<void> {
 
   // Rename 'name' → 'title' if the old schema used 'name' (runs outside main transaction)
   await migrateNameColumnToTitle(p);
+
+  // Migrate primary key columns from INTEGER to UUID (deletes old integer-ID rows)
+  await migratePrimaryKeysToUuid(p);
 
   // Migrate okr_id columns from INTEGER to UUID — runs in its own connections
   // outside the main transaction (ALTER COLUMN TYPE cannot run inside a transaction
