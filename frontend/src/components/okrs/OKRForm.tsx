@@ -8,7 +8,7 @@ import { useCreateOKR } from '../../hooks/useOKRs';
 import { useRoadmapContext } from '../../context/RoadmapContext';
 import type { Pod } from '../../types';
 
-const ALL_PODS: Pod[] = ['Retail Therapy', 'JSON ID'];
+const ALL_PODS: Pod[] = ['Retail Therapy', 'JSON ID', 'Migration'];
 
 function generateTimeWindowOptions() {
   const currentYear = new Date().getFullYear();

@@ -20,6 +20,7 @@ export function RoadmapView() {
 
   const retailTherapyInitiatives = filteredInitiatives.filter((i) => i.pod === 'Retail Therapy');
   const jsonIdInitiatives = filteredInitiatives.filter((i) => i.pod === 'JSON ID');
+  const migrationInitiatives = filteredInitiatives.filter((i) => i.pod === 'Migration');
 
   // Auto-center on current month on mount
   useEffect(() => {
@@ -126,6 +127,12 @@ export function RoadmapView() {
             <WorkstreamLane
               title="JSON ID"
               initiatives={jsonIdInitiatives}
+              viewStart={viewStartDate}
+              viewEnd={viewEndDate}
+            />
+            <WorkstreamLane
+              title="Migration"
+              initiatives={migrationInitiatives}
               viewStart={viewStartDate}
               viewEnd={viewEndDate}
             />

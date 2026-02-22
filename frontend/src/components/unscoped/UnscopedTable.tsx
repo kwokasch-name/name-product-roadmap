@@ -34,7 +34,9 @@ function InitiativeRow({ initiative }: { initiative: Initiative }) {
           className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
             initiative.pod === 'Retail Therapy'
               ? 'bg-indigo-100 text-indigo-700'
-              : 'bg-green-100 text-green-700'
+              : initiative.pod === 'JSON ID'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-orange-100 text-orange-700'
           }`}
         >
           {initiative.pod}

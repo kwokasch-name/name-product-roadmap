@@ -85,8 +85,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // POST /api/initiatives - Create new initiative
       let { title, description, startDate, endDate, developerCount, okrId, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as CreateInitiativeInput;
 
-      if (!pod || !['Retail Therapy', 'JSON ID'].includes(pod)) {
-        return res.status(400).json({ error: 'Pod must be "Retail Therapy" or "JSON ID"' });
+      if (!pod || !['Retail Therapy', 'JSON ID', 'Migration'].includes(pod)) {
+        return res.status(400).json({ error: 'Pod must be "Retail Therapy", "JSON ID", or "Migration"' });
       }
 
       // If linking to a Jira epic, fetch its data to pre-fill fields

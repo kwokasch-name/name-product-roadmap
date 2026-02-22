@@ -1,4 +1,4 @@
-export type Pod = 'Retail Therapy' | 'JSON ID';
+export type Pod = 'Retail Therapy' | 'JSON ID' | 'Migration';
 export type InitiativeStatus = 'planned' | 'in_progress' | 'completed' | 'blocked';
 
 export interface OKR {

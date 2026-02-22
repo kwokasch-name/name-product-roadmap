@@ -26,7 +26,7 @@ export function InitiativeBar({ initiative, position, row }: InitiativeBarProps)
       <div
         className={clsx(
           'initiative-bar',
-          initiative.pod === 'Retail Therapy' ? 'retail-therapy' : 'json-id',
+          initiative.pod === 'Retail Therapy' ? 'retail-therapy' : initiative.pod === 'Migration' ? 'migration' : 'json-id',
           {
             'opacity-60': initiative.status === 'completed',
             'ring-2 ring-yellow-400': initiative.status === 'blocked',

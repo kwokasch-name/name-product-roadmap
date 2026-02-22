@@ -14,6 +14,7 @@ import type { Pod, InitiativeStatus, JiraEpic } from '../../types';
 const podOptions = [
   { value: 'Retail Therapy', label: 'Retail Therapy' },
   { value: 'JSON ID', label: 'JSON ID' },
+  { value: 'Migration', label: 'Migration' },
 ];
 
 const statusOptions = [

@@ -20,7 +20,7 @@ export function runMigrations(db: Database.Database) {
       CREATE TABLE IF NOT EXISTS okr_pods (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         okr_id INTEGER NOT NULL,
-        pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID')),
+        pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID', 'Migration')),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (okr_id) REFERENCES okrs(id) ON DELETE CASCADE,
         UNIQUE(okr_id, pod)

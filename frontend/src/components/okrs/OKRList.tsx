@@ -14,14 +14,17 @@ export function OKRList() {
 
   // Group OKRs by sections
   const companyOKRs = filteredOKRs.filter(okr => okr.isCompanyWide);
-  const bothPodsOKRs = filteredOKRs.filter(okr => 
-    !okr.isCompanyWide && okr.pods.length === 2
+  const multiPodOKRs = filteredOKRs.filter(okr =>
+    !okr.isCompanyWide && okr.pods.length > 1
   );
-  const retailTherapyOKRs = filteredOKRs.filter(okr => 
+  const retailTherapyOKRs = filteredOKRs.filter(okr =>
     !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('Retail Therapy')
   );
   const jsonIdOKRs = filteredOKRs.filter(okr =>
     !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('JSON ID')
+  );
+  const migrationOKRs = filteredOKRs.filter(okr =>
+    !okr.isCompanyWide && okr.pods.length === 1 && okr.pods.includes('Migration')
   );
   const ungroupedOKRs = filteredOKRs.filter(okr =>
     !okr.isCompanyWide && (!okr.pods || okr.pods.length === 0)
@@ -86,7 +89,8 @@ export function OKRList() {
             {renderSection('Company-wide', companyOKRs, 'company')}
             {renderSection('Retail Therapy', retailTherapyOKRs, 'retail-therapy')}
             {renderSection('JSON ID', jsonIdOKRs, 'json-id')}
-            {renderSection('Both Pods', bothPodsOKRs, 'both-pods')}
+            {renderSection('Migration', migrationOKRs, 'migration')}
+            {renderSection('Multiple Pods', multiPodOKRs, 'multi-pod')}
             {renderSection('Other', ungroupedOKRs, 'ungrouped')}
           </div>
         )}

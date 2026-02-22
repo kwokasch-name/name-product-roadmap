@@ -80,7 +80,7 @@ router.post('/', (req, res) => {
     
     // Validate pods if provided
     if (pods && pods.length > 0) {
-      const validPods: Pod[] = ['Retail Therapy', 'JSON ID'];
+      const validPods: Pod[] = ['Retail Therapy', 'JSON ID', 'Migration'];
       for (const pod of pods) {
         if (!validPods.includes(pod)) {
           return res.status(400).json({ error: `Invalid pod: ${pod}` });
