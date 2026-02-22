@@ -10,7 +10,7 @@ import { getMonthsBetween } from '../../lib/dateUtils';
 export function RoadmapView() {
   const { data: initiatives, isLoading } = useScopedInitiatives();
   const { data: okrs } = useOKRs();
-  const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen, selectedOKRIds } = useRoadmapContext();
+  const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen, selectedOKRIds, visiblePods, togglePodVisibility } = useRoadmapContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Sorted list of all OKR IDs — used for deterministic color assignment
@@ -111,6 +111,25 @@ export function RoadmapView() {
               </svg>
             </Button>
           </div>
+          <div className="flex items-center gap-1 border border-gray-300 rounded-md px-1">
+            {(['Retail Therapy', 'JSON ID', 'Migration'] as const).map((pod) => (
+              <button
+                key={pod}
+                onClick={() => togglePodVisibility(pod)}
+                className={`px-2 py-1 text-xs font-medium rounded transition-all ${
+                  visiblePods.has(pod)
+                    ? pod === 'Retail Therapy'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : pod === 'JSON ID'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-orange-100 text-orange-700'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {pod}
+              </button>
+            ))}
+          </div>
           <Button size="sm" onClick={() => setIsInitiativeFormOpen(true)}>
             + Add Initiative
           </Button>
@@ -126,27 +145,33 @@ export function RoadmapView() {
         ) : (
           <div style={{ width: 'max-content' }}>
             <TimelineHeader startDate={viewStartDate} endDate={viewEndDate} />
-            <WorkstreamLane
-              title="Retail Therapy"
-              initiatives={retailTherapyInitiatives}
-              viewStart={viewStartDate}
-              viewEnd={viewEndDate}
-              allOkrIds={allOkrIds}
-            />
-            <WorkstreamLane
-              title="JSON ID"
-              initiatives={jsonIdInitiatives}
-              viewStart={viewStartDate}
-              viewEnd={viewEndDate}
-              allOkrIds={allOkrIds}
-            />
-            <WorkstreamLane
-              title="Migration"
-              initiatives={migrationInitiatives}
-              viewStart={viewStartDate}
-              viewEnd={viewEndDate}
-              allOkrIds={allOkrIds}
-            />
+            {visiblePods.has('Retail Therapy') && (
+              <WorkstreamLane
+                title="Retail Therapy"
+                initiatives={retailTherapyInitiatives}
+                viewStart={viewStartDate}
+                viewEnd={viewEndDate}
+                allOkrIds={allOkrIds}
+              />
+            )}
+            {visiblePods.has('JSON ID') && (
+              <WorkstreamLane
+                title="JSON ID"
+                initiatives={jsonIdInitiatives}
+                viewStart={viewStartDate}
+                viewEnd={viewEndDate}
+                allOkrIds={allOkrIds}
+              />
+            )}
+            {visiblePods.has('Migration') && (
+              <WorkstreamLane
+                title="Migration"
+                initiatives={migrationInitiatives}
+                viewStart={viewStartDate}
+                viewEnd={viewEndDate}
+                allOkrIds={allOkrIds}
+              />
+            )}
           </div>
         )}
       </div>

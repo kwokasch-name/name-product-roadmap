@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { Initiative } from '../types';
+import type { Initiative, Pod } from '../types';
 import { getDefaultViewRange } from '../lib/dateUtils';
+
+const ALL_PODS: Pod[] = ['Retail Therapy', 'JSON ID', 'Migration'];
 
 interface RoadmapContextValue {
   viewStartDate: Date;
@@ -17,6 +19,8 @@ interface RoadmapContextValue {
   toggleOKRSelection: (id: string) => void;
   selectAllOKRs: (ids: string[]) => void;
   deselectAllOKRs: () => void;
+  visiblePods: Set<Pod>;
+  togglePodVisibility: (pod: Pod) => void;
 }
 
 const RoadmapContext = createContext<RoadmapContextValue | null>(null);
@@ -29,6 +33,7 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
   const [isOKRFormOpen, setIsOKRFormOpen] = useState(false);
   const [isInitiativeFormOpen, setIsInitiativeFormOpen] = useState(false);
   const [selectedOKRIds, setSelectedOKRIds] = useState<Set<string>>(new Set());
+  const [visiblePods, setVisiblePods] = useState<Set<Pod>>(new Set(ALL_PODS));
 
   const setViewRange = (start: Date, end: Date) => {
     setViewStartDate(start);
@@ -55,6 +60,18 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
     setSelectedOKRIds(new Set());
   };
 
+  const togglePodVisibility = (pod: Pod) => {
+    setVisiblePods(prev => {
+      const next = new Set(prev);
+      if (next.has(pod)) {
+        next.delete(pod);
+      } else {
+        next.add(pod);
+      }
+      return next;
+    });
+  };
+
   return (
     <RoadmapContext.Provider
       value={{
@@ -72,6 +89,8 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
         toggleOKRSelection,
         selectAllOKRs,
         deselectAllOKRs,
+        visiblePods,
+        togglePodVisibility,
       }}
     >
       {children}

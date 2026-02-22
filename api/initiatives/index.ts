@@ -24,13 +24,15 @@ function rowToInitiative(row: any) {
   };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function enrichWithOKRs(initiative: any) {
   // Fetch all linked OKR IDs ordered by position (priority)
   const ioResult = await query(
     `SELECT okr_id FROM initiative_okrs WHERE initiative_id = $1 ORDER BY position ASC`,
     [initiative.id]
   );
-  const okrIds = ioResult.rows.map((r: any) => r.okr_id);
+  const okrIds = ioResult.rows.map((r: any) => r.okr_id).filter((id: string) => UUID_RE.test(id));
   initiative.okrIds = okrIds;
 
   if (okrIds.length > 0) {

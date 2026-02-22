@@ -112,6 +112,52 @@ async function migrateIntegerColumnsToUuid(p: Pool): Promise<void> {
   }
 }
 
+async function cleanupInvalidJunctionRows(p: Pool): Promise<void> {
+  // Remove initiative_okrs rows where the okr_id doesn't match a real OKR.
+  // This handles cases where old integer IDs (e.g. "1") were copied during migration.
+  const client = await p.connect();
+  try {
+    // First check the data type of the okr_id column — it may be text from an older schema
+    const typeResult = await client.query(
+      `SELECT data_type FROM information_schema.columns
+       WHERE table_name = 'initiative_okrs' AND column_name = 'okr_id'`
+    );
+    const dataType = typeResult.rows[0]?.data_type;
+
+    if (dataType && dataType !== 'uuid') {
+      // Column is not UUID — drop all rows and recreate with correct type
+      console.log(`initiative_okrs.okr_id is ${dataType}, expected uuid. Recreating table...`);
+      await client.query('DROP TABLE IF EXISTS initiative_okrs');
+      await client.query(`
+        CREATE TABLE initiative_okrs (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          initiative_id UUID NOT NULL,
+          okr_id UUID NOT NULL,
+          position INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(initiative_id, okr_id)
+        )
+      `);
+      await client.query('CREATE INDEX IF NOT EXISTS idx_initiative_okrs_initiative ON initiative_okrs(initiative_id)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_initiative_okrs_okr ON initiative_okrs(okr_id)');
+      console.log('initiative_okrs table recreated with UUID columns');
+    } else {
+      // Column is UUID — just clean up orphaned rows
+      const result = await client.query(`
+        DELETE FROM initiative_okrs
+        WHERE okr_id NOT IN (SELECT id FROM okrs)
+      `);
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`Cleaned up ${result.rowCount} invalid initiative_okrs rows`);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to clean up invalid junction rows:', err);
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureSchema(p: Pool): Promise<void> {
   const client = await p.connect();
   try {
@@ -163,7 +209,6 @@ async function ensureSchema(p: Pool): Promise<void> {
         start_date DATE,
         end_date DATE,
         developer_count INTEGER DEFAULT 1,
-        okr_id UUID,
         success_criteria TEXT,
         pod TEXT NOT NULL CHECK(pod IN ('Retail Therapy', 'JSON ID', 'Migration')),
         status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'in_progress', 'completed', 'blocked')),
@@ -192,7 +237,6 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiative_okrs_okr ON initiative_okrs(okr_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_key_results_okr ON key_results(okr_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_okr_pods_okr ON okr_pods(okr_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_okr_pods_pod ON okr_pods(pod)`);
@@ -251,6 +295,10 @@ async function ensureSchema(p: Pool): Promise<void> {
 
   // Migrate initiatives.okr_id single column to initiative_okrs junction table
   await migrateOkrIdToJunctionTable(p);
+
+  // Clean up any initiative_okrs rows with invalid okr_id values
+  // (e.g. old integer IDs like "1" that were migrated before UUID conversion)
+  await cleanupInvalidJunctionRows(p);
 
   console.log('Schema ready');
 }
