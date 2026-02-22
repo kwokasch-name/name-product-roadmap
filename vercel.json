@@ -4,6 +4,22 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/okrs/:id/key-results",
+      "destination": "/api/okrs/[id]/key-results/index"
+    },
+    {
+      "source": "/api/okrs/:id",
+      "destination": "/api/okrs/[id]"
+    },
+    {
+      "source": "/api/initiatives/:id",
+      "destination": "/api/initiatives/[id]"
+    },
+    {
+      "source": "/api/key-results/:id",
+      "destination": "/api/key-results/[id]"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

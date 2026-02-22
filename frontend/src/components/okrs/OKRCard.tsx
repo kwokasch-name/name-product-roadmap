@@ -66,19 +66,25 @@ export function OKRCard({ okr }: OKRCardProps) {
 
           {/* Time window + scope badges */}
           <div className="flex flex-wrap items-center gap-1.5 mt-2 ml-5">
-            {okr.timeFrame && (
+            {okr.timeFrame ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
                 <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 {okr.timeFrame}
               </span>
+            ) : (
+              <span className="text-xs text-gray-400 italic">No time frame</span>
             )}
-            {scopeBadges.map(({ label, className }) => (
-              <span key={label} className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${className}`}>
-                {label}
-              </span>
-            ))}
+            {scopeBadges.length > 0 ? (
+              scopeBadges.map(({ label, className }) => (
+                <span key={label} className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${className}`}>
+                  {label}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-gray-400 italic">No scope</span>
+            )}
           </div>
 
           {/* Key results */}
