@@ -9,9 +9,10 @@ interface WorkstreamLaneProps {
   initiatives: Initiative[];
   viewStart: Date;
   viewEnd: Date;
+  allOkrIds: string[];
 }
 
-const ROW_HEIGHT = 240;
+const ROW_HEIGHT = 48;
 const ROW_GAP = 8;
 
 function assignRows(
@@ -25,7 +26,7 @@ function assignRows(
     let assignedRow = 0;
 
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i].end <= item.position.left) {
+      if (rows[i].end + 4 <= item.position.left) {
         assignedRow = i;
         rows[i].end = itemEnd;
         return { ...item, row: assignedRow };
@@ -38,7 +39,7 @@ function assignRows(
   });
 }
 
-export function WorkstreamLane({ title, initiatives, viewStart, viewEnd }: WorkstreamLaneProps) {
+export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrIds }: WorkstreamLaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const months = getMonthsBetween(viewStart, viewEnd);
   const totalWidth = months.length * MONTH_WIDTH;
@@ -86,7 +87,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd }: Works
       </div>
       <div ref={containerRef} className="relative bg-white" style={{ width: totalWidth }}>
         {positionedInitiatives.map(({ initiative, position, row }) => (
-          <InitiativeBar key={initiative.id} initiative={initiative} position={position} row={row} />
+          <InitiativeBar key={initiative.id} initiative={initiative} position={position} row={row} allOkrIds={allOkrIds} />
         ))}
         {positionedInitiatives.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">

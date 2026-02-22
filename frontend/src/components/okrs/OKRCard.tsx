@@ -160,7 +160,7 @@ export function OKRCard({ okr }: OKRCardProps) {
       {/* Add Initiative modal pre-linked to this OKR */}
       {isAddingInitiative && (
         <InitiativeForm
-          defaultOkrId={okr.id}
+          defaultOkrIds={[okr.id]}
           isOpen={isAddingInitiative}
           onClose={() => setIsAddingInitiative(false)}
         />

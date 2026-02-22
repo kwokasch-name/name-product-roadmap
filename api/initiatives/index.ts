@@ -11,7 +11,8 @@ function rowToInitiative(row: any) {
     startDate: row.start_date,
     endDate: row.end_date,
     developerCount: row.developer_count,
-    okrId: row.okr_id,
+    okrIds: [] as string[],
+    okrs: [] as any[],
     successCriteria: row.success_criteria,
     pod: row.pod,
     status: row.status,
@@ -23,24 +24,37 @@ function rowToInitiative(row: any) {
   };
 }
 
-async function enrichWithOKR(initiative: any) {
-  if (initiative.okrId) {
-    const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [initiative.okrId]);
-    if (okrResult.rows.length > 0) {
-      const okr = okrResult.rows[0];
-      const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
-      initiative.okr = {
-        id: okr.id,
-        title: okr.title,
-        description: okr.description,
-        timeFrame: okr.time_frame,
-        isCompanyWide: Boolean(okr.is_company_wide),
-        pods: podsResult.rows.map(p => p.pod as Pod),
-        createdAt: okr.created_at,
-        updatedAt: okr.updated_at,
-      };
+async function enrichWithOKRs(initiative: any) {
+  // Fetch all linked OKR IDs ordered by position (priority)
+  const ioResult = await query(
+    `SELECT okr_id FROM initiative_okrs WHERE initiative_id = $1 ORDER BY position ASC`,
+    [initiative.id]
+  );
+  const okrIds = ioResult.rows.map((r: any) => r.okr_id);
+  initiative.okrIds = okrIds;
+
+  if (okrIds.length > 0) {
+    const okrs = [];
+    for (const okrId of okrIds) {
+      const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [okrId]);
+      if (okrResult.rows.length > 0) {
+        const okr = okrResult.rows[0];
+        const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
+        okrs.push({
+          id: okr.id,
+          title: okr.title,
+          description: okr.description,
+          timeFrame: okr.time_frame,
+          isCompanyWide: Boolean(okr.is_company_wide),
+          pods: podsResult.rows.map((p: any) => p.pod as Pod),
+          createdAt: okr.created_at,
+          updatedAt: okr.updated_at,
+        });
+      }
     }
+    initiative.okrs = okrs;
   }
+
   return initiative;
 }
 
@@ -64,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         params.push(pod);
       }
       if (okr_id) {
-        queryText += ` AND okr_id = $${paramIndex++}`;
+        queryText += ` AND id IN (SELECT initiative_id FROM initiative_okrs WHERE okr_id = $${paramIndex++})`;
         params.push(okr_id);
       }
       if (status) {
@@ -76,14 +90,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await query(queryText, params);
       const initiatives = result.rows.map(rowToInitiative);
-      const enriched = await Promise.all(initiatives.map(init => enrichWithOKR(init)));
-      
+      const enriched = await Promise.all(initiatives.map(init => enrichWithOKRs(init)));
+
       return res.json(enriched);
     }
 
     if (req.method === 'POST') {
       // POST /api/initiatives - Create new initiative
-      let { title, description, startDate, endDate, developerCount, okrId, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as CreateInitiativeInput;
+      let { title, description, startDate, endDate, developerCount, okrIds, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as CreateInitiativeInput;
 
       if (!pod || !['Retail Therapy', 'JSON ID', 'Migration'].includes(pod)) {
         return res.status(400).json({ error: 'Pod must be "Retail Therapy", "JSON ID", or "Migration"' });
@@ -109,15 +123,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const result = await query(
-        `INSERT INTO initiatives (title, description, start_date, end_date, developer_count, okr_id, success_criteria, pod, status, jira_epic_key, jira_sync_enabled, jira_last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        `INSERT INTO initiatives (title, description, start_date, end_date, developer_count, success_criteria, pod, status, jira_epic_key, jira_sync_enabled, jira_last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
         [
           title.trim(),
           description?.trim() || null,
           startDate || null,
           endDate || null,
           developerCount || 1,
-          okrId || null,
           successCriteria?.trim() || null,
           pod,
           status || 'planned',
@@ -128,7 +141,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
 
       const initiative = rowToInitiative(result.rows[0]);
-      return res.status(201).json(await enrichWithOKR(initiative));
+      const initiativeId = initiative.id;
+
+      // Insert OKR associations into junction table
+      if (okrIds && okrIds.length > 0) {
+        for (let i = 0; i < okrIds.length; i++) {
+          try {
+            await query(
+              'INSERT INTO initiative_okrs (initiative_id, okr_id, position) VALUES ($1, $2, $3)',
+              [initiativeId, okrIds[i], i]
+            );
+          } catch (err: any) {
+            console.error(`Error linking OKR ${okrIds[i]} to initiative ${initiativeId}:`, err);
+          }
+        }
+      }
+
+      return res.status(201).json(await enrichWithOKRs(initiative));
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

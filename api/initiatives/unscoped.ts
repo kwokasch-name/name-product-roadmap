@@ -10,33 +10,49 @@ function rowToInitiative(row: any) {
     startDate: row.start_date,
     endDate: row.end_date,
     developerCount: row.developer_count,
-    okrId: row.okr_id,
+    okrIds: [] as string[],
+    okrs: [] as any[],
     successCriteria: row.success_criteria,
     pod: row.pod,
     status: row.status,
+    jiraEpicKey: row.jira_epic_key ?? null,
+    jiraSyncEnabled: Boolean(row.jira_sync_enabled ?? true),
+    jiraLastSyncedAt: row.jira_last_synced_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-async function enrichWithOKR(initiative: any) {
-  if (initiative.okrId) {
-    const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [initiative.okrId]);
-    if (okrResult.rows.length > 0) {
-      const okr = okrResult.rows[0];
-      const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
-      initiative.okr = {
-        id: okr.id,
-        title: okr.title,
-        description: okr.description,
-        timeFrame: okr.time_frame,
-        isCompanyWide: Boolean(okr.is_company_wide),
-        pods: podsResult.rows.map(p => p.pod as Pod),
-        createdAt: okr.created_at,
-        updatedAt: okr.updated_at,
-      };
+async function enrichWithOKRs(initiative: any) {
+  const ioResult = await query(
+    `SELECT okr_id FROM initiative_okrs WHERE initiative_id = $1 ORDER BY position ASC`,
+    [initiative.id]
+  );
+  const okrIds = ioResult.rows.map((r: any) => r.okr_id);
+  initiative.okrIds = okrIds;
+
+  if (okrIds.length > 0) {
+    const okrs = [];
+    for (const okrId of okrIds) {
+      const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [okrId]);
+      if (okrResult.rows.length > 0) {
+        const okr = okrResult.rows[0];
+        const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
+        okrs.push({
+          id: okr.id,
+          title: okr.title,
+          description: okr.description,
+          timeFrame: okr.time_frame,
+          isCompanyWide: Boolean(okr.is_company_wide),
+          pods: podsResult.rows.map((p: any) => p.pod as Pod),
+          createdAt: okr.created_at,
+          updatedAt: okr.updated_at,
+        });
+      }
     }
+    initiative.okrs = okrs;
   }
+
   return initiative;
 }
 
@@ -53,10 +69,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await query(
         'SELECT * FROM initiatives WHERE start_date IS NULL OR end_date IS NULL ORDER BY created_at DESC'
       );
-      
+
       const initiatives = result.rows.map(rowToInitiative);
-      const enriched = await Promise.all(initiatives.map(init => enrichWithOKR(init)));
-      
+      const enriched = await Promise.all(initiatives.map(init => enrichWithOKRs(init)));
+
       return res.json(enriched);
     }
 

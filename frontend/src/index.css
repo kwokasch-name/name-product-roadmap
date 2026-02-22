@@ -12,18 +12,6 @@ body {
   @apply flex items-center justify-between gap-2 overflow-hidden;
 }
 
-.initiative-bar.retail-therapy {
-  @apply bg-indigo-500 hover:bg-indigo-600;
-}
-
-.initiative-bar.json-id {
-  @apply bg-green-500 hover:bg-green-600;
-}
-
-.initiative-bar.migration {
-  @apply bg-orange-500 hover:bg-orange-600;
-}
-
 .tooltip {
   @apply absolute z-50 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg;
   @apply max-w-xs whitespace-pre-wrap;

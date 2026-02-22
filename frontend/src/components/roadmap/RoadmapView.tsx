@@ -1,21 +1,29 @@
 import { useScopedInitiatives } from '../../hooks/useInitiatives';
+import { useOKRs } from '../../hooks/useOKRs';
 import { useRoadmapContext } from '../../context/RoadmapContext';
 import { TimelineHeader, MONTH_WIDTH } from './TimelineHeader';
 import { WorkstreamLane } from './WorkstreamLane';
 import { Button } from '../ui/Button';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { getMonthsBetween } from '../../lib/dateUtils';
 
 export function RoadmapView() {
   const { data: initiatives, isLoading } = useScopedInitiatives();
+  const { data: okrs } = useOKRs();
   const { viewStartDate, viewEndDate, setViewRange, setIsInitiativeFormOpen, selectedOKRIds } = useRoadmapContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sorted list of all OKR IDs — used for deterministic color assignment
+  const allOkrIds = useMemo(
+    () => (okrs || []).map((o) => o.id).sort(),
+    [okrs]
+  );
 
   // Filter initiatives based on selected OKRs
   // If no OKRs are selected, show all initiatives
   // If OKRs are selected, only show initiatives linked to those OKRs
   const filteredInitiatives = selectedOKRIds.size > 0
-    ? initiatives?.filter((i) => i.okrId !== null && selectedOKRIds.has(i.okrId)) || []
+    ? initiatives?.filter((i) => i.okrIds.some((id) => selectedOKRIds.has(id))) || []
     : initiatives || [];
 
   const retailTherapyInitiatives = filteredInitiatives.filter((i) => i.pod === 'Retail Therapy');
@@ -123,18 +131,21 @@ export function RoadmapView() {
               initiatives={retailTherapyInitiatives}
               viewStart={viewStartDate}
               viewEnd={viewEndDate}
+              allOkrIds={allOkrIds}
             />
             <WorkstreamLane
               title="JSON ID"
               initiatives={jsonIdInitiatives}
               viewStart={viewStartDate}
               viewEnd={viewEndDate}
+              allOkrIds={allOkrIds}
             />
             <WorkstreamLane
               title="Migration"
               initiatives={migrationInitiatives}
               viewStart={viewStartDate}
               viewEnd={viewEndDate}
+              allOkrIds={allOkrIds}
             />
           </div>
         )}

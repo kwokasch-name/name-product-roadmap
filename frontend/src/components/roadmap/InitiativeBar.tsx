@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { Tooltip } from '../ui/Tooltip';
 import { useRoadmapContext } from '../../context/RoadmapContext';
+import { getInitiativeBarColor } from '../../lib/okrColors';
 import type { Initiative } from '../../types';
 
 const ROW_HEIGHT = 48;
@@ -10,9 +11,10 @@ interface InitiativeBarProps {
   initiative: Initiative;
   position: { left: number; width: number };
   row: number;
+  allOkrIds: string[];
 }
 
-export function InitiativeBar({ initiative, position, row }: InitiativeBarProps) {
+export function InitiativeBar({ initiative, position, row, allOkrIds }: InitiativeBarProps) {
   const { setEditingInitiative } = useRoadmapContext();
 
   const handleClick = () => {
@@ -20,13 +22,15 @@ export function InitiativeBar({ initiative, position, row }: InitiativeBarProps)
   };
 
   const top = ROW_GAP + row * (ROW_HEIGHT + ROW_GAP);
+  const color = getInitiativeBarColor(initiative.okrIds, allOkrIds);
 
   return (
     <Tooltip content={initiative.successCriteria || 'No success criteria defined. Click to add.'}>
       <div
         className={clsx(
           'initiative-bar',
-          initiative.pod === 'Retail Therapy' ? 'retail-therapy' : initiative.pod === 'Migration' ? 'migration' : 'json-id',
+          color.bg,
+          color.hover,
           {
             'opacity-60': initiative.status === 'completed',
             'ring-2 ring-yellow-400': initiative.status === 'blocked',

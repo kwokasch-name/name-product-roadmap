@@ -43,7 +43,9 @@ function InitiativeRow({ initiative }: { initiative: Initiative }) {
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-600">
-        {initiative.okr?.title || <span className="text-gray-400">-</span>}
+        {initiative.okrs && initiative.okrs.length > 0
+          ? initiative.okrs.map((o) => o.title).join(', ')
+          : <span className="text-gray-400">-</span>}
       </td>
       <td className="px-4 py-3 text-sm text-gray-600 text-center">{initiative.developerCount}</td>
       <td className="px-4 py-3 text-sm">

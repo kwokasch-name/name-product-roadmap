@@ -25,15 +25,15 @@ const statusOptions = [
 ];
 
 interface InitiativeFormProps {
-  /** When provided, the OKR dropdown is pre-selected with this OKR's id */
-  defaultOkrId?: string;
+  /** When provided, these OKRs are pre-selected */
+  defaultOkrIds?: string[];
   /** Override open state (used when opened from OKRCard) */
   isOpen?: boolean;
   /** Override close handler (used when opened from OKRCard) */
   onClose?: () => void;
 }
 
-export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCloseProp }: InitiativeFormProps = {}) {
+export function InitiativeForm({ defaultOkrIds, isOpen: isOpenProp, onClose: onCloseProp }: InitiativeFormProps = {}) {
   const { isInitiativeFormOpen, setIsInitiativeFormOpen, editingInitiative, setEditingInitiative } = useRoadmapContext();
   const { data: okrs } = useOKRs();
   const { data: jiraStatus } = useJiraStatus();
@@ -48,7 +48,7 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [developerCount, setDeveloperCount] = useState('1');
-  const [okrId, setOkrId] = useState(defaultOkrId ?? '');
+  const [selectedOkrIds, setSelectedOkrIds] = useState<string[]>(defaultOkrIds ?? []);
   const [successCriteria, setSuccessCriteria] = useState('');
   const [status, setStatus] = useState<InitiativeStatus>('planned');
 
@@ -63,7 +63,6 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
   const jiraConfigured = jiraStatus?.configured ?? false;
 
   const isEditing = !!editingInitiative;
-  // Use prop-controlled open state if provided (e.g. from OKRCard), otherwise context
   const isOpen = isOpenProp !== undefined ? isOpenProp : (isInitiativeFormOpen || isEditing);
 
   useEffect(() => {
@@ -74,7 +73,7 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
       setStartDate(toInputDate(editingInitiative.startDate));
       setEndDate(toInputDate(editingInitiative.endDate));
       setDeveloperCount(String(editingInitiative.developerCount));
-      setOkrId(editingInitiative.okrId ? String(editingInitiative.okrId) : '');
+      setSelectedOkrIds(editingInitiative.okrIds ?? []);
       setSuccessCriteria(editingInitiative.successCriteria || '');
       setStatus(editingInitiative.status);
       setJiraEpicKey(editingInitiative.jiraEpicKey ?? null);
@@ -84,7 +83,6 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
     }
   }, [editingInitiative]);
 
-  // Close Jira dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (jiraSearchRef.current && !jiraSearchRef.current.contains(e.target as Node)) {
@@ -102,7 +100,7 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
     setStartDate('');
     setEndDate('');
     setDeveloperCount('1');
-    setOkrId(defaultOkrId ?? '');
+    setSelectedOkrIds(defaultOkrIds ?? []);
     setSuccessCriteria('');
     setStatus('planned');
     setJiraEpicKey(null);
@@ -117,11 +115,34 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
     resetForm();
   });
 
+  const handleOkrToggle = (okrId: string) => {
+    setSelectedOkrIds((prev) =>
+      prev.includes(okrId) ? prev.filter((id) => id !== okrId) : [...prev, okrId]
+    );
+  };
+
+  const handleOkrMoveUp = (index: number) => {
+    if (index === 0) return;
+    setSelectedOkrIds((prev) => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  };
+
+  const handleOkrMoveDown = (index: number) => {
+    setSelectedOkrIds((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  };
+
   const handleJiraEpicSelect = (epic: JiraEpic) => {
     setJiraEpicKey(epic.key);
     setJiraSearch('');
     setShowJiraDropdown(false);
-    // Pre-fill fields from Jira
     if (!title) setTitle(epic.summary);
     if (!description && epic.description) setDescription(epic.description);
     if (epic.startDate) setStartDate(epic.startDate);
@@ -157,7 +178,7 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       developerCount: parseInt(developerCount) || 1,
-      okrId: okrId || undefined,
+      okrIds: selectedOkrIds.length > 0 ? selectedOkrIds : undefined,
       successCriteria: successCriteria.trim() || undefined,
       status,
       jiraEpicKey: jiraEpicKey || undefined,
@@ -180,11 +201,6 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
     }
   };
 
-  const okrOptions = [
-    { value: '', label: 'No OKR' },
-    ...(okrs?.map((okr) => ({ value: String(okr.id), label: okr.title })) || []),
-  ];
-
   const formatSyncTime = (ts: string | null) => {
     if (!ts) return 'Never';
     const d = new Date(ts);
@@ -193,6 +209,9 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
     if (mins < 60) return `${mins}m ago`;
     return d.toLocaleDateString();
   };
+
+  // Get OKR titles for the selected order list
+  const getOkrTitle = (okrId: string) => okrs?.find((o) => o.id === okrId)?.title ?? okrId;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={isEditing ? 'Edit Initiative' : 'Add Initiative'}>
@@ -250,12 +269,83 @@ export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCl
           />
         </div>
 
-        <Select
-          label="Maps to OKR"
-          value={okrId}
-          onChange={(e) => setOkrId(e.target.value)}
-          options={okrOptions}
-        />
+        {/* Multi-OKR Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Maps to OKRs
+          </label>
+
+          {/* Selected OKRs with ordering */}
+          {selectedOkrIds.length > 0 && (
+            <div className="mb-2 space-y-1">
+              {selectedOkrIds.map((okrId, index) => (
+                <div
+                  key={okrId}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm ${
+                    index === 0 ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  {index === 0 && (
+                    <span className="text-xs font-medium text-indigo-600 flex-shrink-0">Primary</span>
+                  )}
+                  <span className="flex-1 truncate text-gray-700">{getOkrTitle(okrId)}</span>
+                  <div className="flex gap-0.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOkrMoveUp(index)}
+                      disabled={index === 0}
+                      className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                      title="Move up"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOkrMoveDown(index)}
+                      disabled={index === selectedOkrIds.length - 1}
+                      className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                      title="Move down"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* OKR checkboxes */}
+          <div className="border border-gray-200 rounded-md max-h-40 overflow-y-auto">
+            {(!okrs || okrs.length === 0) ? (
+              <p className="px-3 py-2 text-sm text-gray-400">No OKRs available</p>
+            ) : (
+              okrs.map((okr) => (
+                <label
+                  key={okr.id}
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedOkrIds.includes(okr.id)}
+                    onChange={() => handleOkrToggle(okr.id)}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm text-gray-700 truncate">{okr.title}</span>
+                  {okr.timeFrame && (
+                    <span className="text-xs text-gray-400 flex-shrink-0">{okr.timeFrame}</span>
+                  )}
+                </label>
+              ))
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            First selected OKR is primary and determines the bar color on the roadmap.
+          </p>
+        </div>
 
         <Textarea
           label="What Success Looks Like"

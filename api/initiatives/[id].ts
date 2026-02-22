@@ -10,7 +10,8 @@ function rowToInitiative(row: any) {
     startDate: row.start_date,
     endDate: row.end_date,
     developerCount: row.developer_count,
-    okrId: row.okr_id,
+    okrIds: [] as string[],
+    okrs: [] as any[],
     successCriteria: row.success_criteria,
     pod: row.pod,
     status: row.status,
@@ -22,24 +23,36 @@ function rowToInitiative(row: any) {
   };
 }
 
-async function enrichWithOKR(initiative: any) {
-  if (initiative.okrId) {
-    const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [initiative.okrId]);
-    if (okrResult.rows.length > 0) {
-      const okr = okrResult.rows[0];
-      const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
-      initiative.okr = {
-        id: okr.id,
-        title: okr.title,
-        description: okr.description,
-        timeFrame: okr.time_frame,
-        isCompanyWide: Boolean(okr.is_company_wide),
-        pods: podsResult.rows.map(p => p.pod as Pod),
-        createdAt: okr.created_at,
-        updatedAt: okr.updated_at,
-      };
+async function enrichWithOKRs(initiative: any) {
+  const ioResult = await query(
+    `SELECT okr_id FROM initiative_okrs WHERE initiative_id = $1 ORDER BY position ASC`,
+    [initiative.id]
+  );
+  const okrIds = ioResult.rows.map((r: any) => r.okr_id);
+  initiative.okrIds = okrIds;
+
+  if (okrIds.length > 0) {
+    const okrs = [];
+    for (const okrId of okrIds) {
+      const okrResult = await query('SELECT * FROM okrs WHERE id = $1', [okrId]);
+      if (okrResult.rows.length > 0) {
+        const okr = okrResult.rows[0];
+        const podsResult = await query('SELECT pod FROM okr_pods WHERE okr_id = $1', [okr.id]);
+        okrs.push({
+          id: okr.id,
+          title: okr.title,
+          description: okr.description,
+          timeFrame: okr.time_frame,
+          isCompanyWide: Boolean(okr.is_company_wide),
+          pods: podsResult.rows.map((p: any) => p.pod as Pod),
+          createdAt: okr.created_at,
+          updatedAt: okr.updated_at,
+        });
+      }
     }
+    initiative.okrs = okrs;
   }
+
   return initiative;
 }
 
@@ -53,26 +66,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
-      // GET /api/initiatives/:id
       const result = await query('SELECT * FROM initiatives WHERE id = $1', [id]);
       const initiative = result.rows[0];
-      
+
       if (!initiative) {
         return res.status(404).json({ error: 'Initiative not found' });
       }
-      
-      return res.json(await enrichWithOKR(rowToInitiative(initiative)));
+
+      return res.json(await enrichWithOKRs(rowToInitiative(initiative)));
     }
 
     if (req.method === 'PUT') {
-      // PUT /api/initiatives/:id
       const existingResult = await query('SELECT * FROM initiatives WHERE id = $1', [id]);
       if (existingResult.rows.length === 0) {
         return res.status(404).json({ error: 'Initiative not found' });
       }
 
-      const existing = existingResult.rows[0];
-      const { title, description, startDate, endDate, developerCount, okrId, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as UpdateInitiativeInput;
+      const { title, description, startDate, endDate, developerCount, okrIds, successCriteria, pod, status, jiraEpicKey, jiraSyncEnabled } = req.body as UpdateInitiativeInput;
 
       if (pod && !['Retail Therapy', 'JSON ID', 'Migration'].includes(pod)) {
         return res.status(400).json({ error: 'Pod must be "Retail Therapy", "JSON ID", or "Migration"' });
@@ -87,7 +97,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (startDate !== undefined) { updates.push(`start_date = $${paramIndex++}`); params.push(startDate); }
       if (endDate !== undefined) { updates.push(`end_date = $${paramIndex++}`); params.push(endDate); }
       if (developerCount !== undefined) { updates.push(`developer_count = $${paramIndex++}`); params.push(developerCount); }
-      if (okrId !== undefined) { updates.push(`okr_id = $${paramIndex++}`); params.push(okrId); }
       if (successCriteria !== undefined) { updates.push(`success_criteria = $${paramIndex++}`); params.push(successCriteria); }
       if (pod !== undefined) { updates.push(`pod = $${paramIndex++}`); params.push(pod); }
       if (status !== undefined) { updates.push(`status = $${paramIndex++}`); params.push(status); }
@@ -100,17 +109,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await query(`UPDATE initiatives SET ${updates.join(', ')} WHERE id = $${paramIndex}`, params);
       }
 
+      // Update OKR associations if provided
+      if (okrIds !== undefined) {
+        await query('DELETE FROM initiative_okrs WHERE initiative_id = $1', [id]);
+        for (let i = 0; i < okrIds.length; i++) {
+          try {
+            await query(
+              'INSERT INTO initiative_okrs (initiative_id, okr_id, position) VALUES ($1, $2, $3)',
+              [id, okrIds[i], i]
+            );
+          } catch (err: any) {
+            console.error(`Error linking OKR ${okrIds[i]} to initiative ${id}:`, err);
+          }
+        }
+      }
+
       const result = await query('SELECT * FROM initiatives WHERE id = $1', [id]);
-      return res.json(await enrichWithOKR(rowToInitiative(result.rows[0])));
+      return res.json(await enrichWithOKRs(rowToInitiative(result.rows[0])));
     }
 
     if (req.method === 'DELETE') {
-      // DELETE /api/initiatives/:id
       const existingResult = await query('SELECT * FROM initiatives WHERE id = $1', [id]);
       if (existingResult.rows.length === 0) {
         return res.status(404).json({ error: 'Initiative not found' });
       }
-      
+
       await query('DELETE FROM initiatives WHERE id = $1', [id]);
       return res.status(204).send('');
     }

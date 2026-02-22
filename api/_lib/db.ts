@@ -44,6 +44,35 @@ async function migrateNameColumnToTitle(p: Pool): Promise<void> {
   }
 }
 
+async function migrateOkrIdToJunctionTable(p: Pool): Promise<void> {
+  // Migrate single-column initiatives.okr_id to the many-to-many initiative_okrs table.
+  // After copying, drop the old column.
+  const client = await p.connect();
+  try {
+    const hasOkrIdCol = await client.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'initiatives' AND column_name = 'okr_id'`
+    );
+    if (hasOkrIdCol.rows.length === 0) return; // already migrated
+
+    console.log('Migrating initiatives.okr_id to initiative_okrs junction table...');
+    // Copy existing relationships to the junction table
+    await client.query(`
+      INSERT INTO initiative_okrs (initiative_id, okr_id, position)
+      SELECT id, okr_id, 0 FROM initiatives WHERE okr_id IS NOT NULL
+      ON CONFLICT (initiative_id, okr_id) DO NOTHING
+    `);
+    // Drop the old column and its index
+    await client.query(`DROP INDEX IF EXISTS idx_initiatives_okr`);
+    await client.query(`ALTER TABLE initiatives DROP COLUMN okr_id`);
+    console.log('initiatives.okr_id migrated to initiative_okrs');
+  } catch (err) {
+    console.error('Failed to migrate okr_id to junction table:', err);
+  } finally {
+    client.release();
+  }
+}
+
 async function migrateIntegerColumnsToUuid(p: Pool): Promise<void> {
   // Check and migrate each okr_id column that is still INTEGER type.
   // These columns reference okrs.id which is UUID, so they must also be UUID.
@@ -146,7 +175,21 @@ async function ensureSchema(p: Pool): Promise<void> {
       )
     `);
 
+    // Junction table for many-to-many initiative <-> OKR relationship
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS initiative_okrs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        initiative_id UUID NOT NULL,
+        okr_id UUID NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(initiative_id, okr_id)
+      )
+    `);
+
     // Indexes
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiative_okrs_initiative ON initiative_okrs(initiative_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_initiative_okrs_okr ON initiative_okrs(okr_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_pod ON initiatives(pod)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_dates ON initiatives(start_date, end_date)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_initiatives_okr ON initiatives(okr_id)`);
@@ -172,7 +215,6 @@ async function ensureSchema(p: Pool): Promise<void> {
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS start_date DATE`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS end_date DATE`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS developer_count INTEGER DEFAULT 1`);
-    await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS okr_id UUID`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS success_criteria TEXT`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS pod TEXT`);
     await client.query(`ALTER TABLE initiatives ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'planned'`);
@@ -206,6 +248,10 @@ async function ensureSchema(p: Pool): Promise<void> {
   // outside the main transaction (ALTER COLUMN TYPE cannot run inside a transaction
   // that also does DDL like CREATE TABLE IF NOT EXISTS in some PG versions)
   await migrateIntegerColumnsToUuid(p);
+
+  // Migrate initiatives.okr_id single column to initiative_okrs junction table
+  await migrateOkrIdToJunctionTable(p);
+
   console.log('Schema ready');
 }
 

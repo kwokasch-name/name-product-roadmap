@@ -31,8 +31,8 @@ export interface Initiative {
   startDate: string | null;
   endDate: string | null;
   developerCount: number;
-  okrId: string | null;
-  okr?: OKR;
+  okrIds: string[];
+  okrs?: OKR[];
   successCriteria: string | null;
   pod: Pod;
   status: InitiativeStatus;
@@ -65,7 +65,7 @@ export interface CreateInitiativeInput {
   startDate?: string;
   endDate?: string;
   developerCount?: number;
-  okrId?: string;
+  okrIds?: string[];
   successCriteria?: string;
   pod: Pod;
   status?: InitiativeStatus;
@@ -79,7 +79,7 @@ export interface UpdateInitiativeInput {
   startDate?: string | null;
   endDate?: string | null;
   developerCount?: number;
-  okrId?: string | null;
+  okrIds?: string[];
   successCriteria?: string;
   pod?: Pod;
   status?: InitiativeStatus;
