@@ -24,7 +24,16 @@ const statusOptions = [
   { value: 'blocked', label: 'Blocked' },
 ];
 
-export function InitiativeForm() {
+interface InitiativeFormProps {
+  /** When provided, the OKR dropdown is pre-selected with this OKR's id */
+  defaultOkrId?: string;
+  /** Override open state (used when opened from OKRCard) */
+  isOpen?: boolean;
+  /** Override close handler (used when opened from OKRCard) */
+  onClose?: () => void;
+}
+
+export function InitiativeForm({ defaultOkrId, isOpen: isOpenProp, onClose: onCloseProp }: InitiativeFormProps = {}) {
   const { isInitiativeFormOpen, setIsInitiativeFormOpen, editingInitiative, setEditingInitiative } = useRoadmapContext();
   const { data: okrs } = useOKRs();
   const { data: jiraStatus } = useJiraStatus();
@@ -39,7 +48,7 @@ export function InitiativeForm() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [developerCount, setDeveloperCount] = useState('1');
-  const [okrId, setOkrId] = useState('');
+  const [okrId, setOkrId] = useState(defaultOkrId ?? '');
   const [successCriteria, setSuccessCriteria] = useState('');
   const [status, setStatus] = useState<InitiativeStatus>('planned');
 
@@ -54,7 +63,8 @@ export function InitiativeForm() {
   const jiraConfigured = jiraStatus?.configured ?? false;
 
   const isEditing = !!editingInitiative;
-  const isOpen = isInitiativeFormOpen || isEditing;
+  // Use prop-controlled open state if provided (e.g. from OKRCard), otherwise context
+  const isOpen = isOpenProp !== undefined ? isOpenProp : (isInitiativeFormOpen || isEditing);
 
   useEffect(() => {
     if (editingInitiative) {
@@ -92,7 +102,7 @@ export function InitiativeForm() {
     setStartDate('');
     setEndDate('');
     setDeveloperCount('1');
-    setOkrId('');
+    setOkrId(defaultOkrId ?? '');
     setSuccessCriteria('');
     setStatus('planned');
     setJiraEpicKey(null);
@@ -101,11 +111,11 @@ export function InitiativeForm() {
     setShowJiraDropdown(false);
   };
 
-  const handleClose = () => {
+  const handleClose = onCloseProp ?? (() => {
     setIsInitiativeFormOpen(false);
     setEditingInitiative(null);
     resetForm();
-  };
+  });
 
   const handleJiraEpicSelect = (epic: JiraEpic) => {
     setJiraEpicKey(epic.key);
