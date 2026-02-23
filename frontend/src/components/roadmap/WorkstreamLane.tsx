@@ -12,8 +12,8 @@ interface WorkstreamLaneProps {
   allOkrIds: string[];
 }
 
-const ROW_HEIGHT = 48;
-const ROW_GAP = 8;
+const ROW_HEIGHT = 36;
+const ROW_GAP = 4;
 
 function assignRows(
   items: { initiative: Initiative; position: { left: number; width: number } }[]
