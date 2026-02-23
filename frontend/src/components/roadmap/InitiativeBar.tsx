@@ -5,7 +5,7 @@ import { getInitiativeBarColor } from '../../lib/okrColors';
 import type { Initiative } from '../../types';
 
 const ROW_HEIGHT = 36;
-const ROW_GAP = 4;
+const ROW_GAP = 2;
 
 interface InitiativeBarProps {
   initiative: Initiative;
