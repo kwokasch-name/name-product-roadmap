@@ -355,7 +355,7 @@ export function InitiativeForm({ defaultOkrIds, isOpen: isOpenProp, onClose: onC
         />
 
         {/* Jira Integration Section */}
-        {jiraConfigured && (
+        {jiraConfigured ? (
           <div className="border border-gray-200 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">Jira Epic</span>
@@ -447,6 +447,17 @@ export function InitiativeForm({ defaultOkrIds, isOpen: isOpenProp, onClose: onC
                 )}
               </div>
             )}
+          </div>
+        ) : (
+          <div className="border border-dashed border-gray-300 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.95 4.34 4.34 4.35V3.5a1.5 1.5 0 0 0-1.5-1.5H11.53z" />
+                <path d="M6.77 6.8c0 2.4 1.96 4.34 4.35 4.35h1.78v1.71c0 2.4 1.95 4.34 4.35 4.35V8.3a1.5 1.5 0 0 0-1.5-1.5H6.77z" />
+                <path d="M2 11.6c0 2.4 1.96 4.34 4.35 4.34h1.78v1.72c0 2.4 1.96 4.34 4.35 4.34V13.1a1.5 1.5 0 0 0-1.5-1.5H2z" />
+              </svg>
+              <span>Jira integration is not configured. Add <code className="text-xs bg-gray-100 px-1 rounded">JIRA_HOST</code>, <code className="text-xs bg-gray-100 px-1 rounded">JIRA_EMAIL</code>, and <code className="text-xs bg-gray-100 px-1 rounded">JIRA_API_TOKEN</code> environment variables to enable epic linking.</span>
+            </div>
           </div>
         )}
 
