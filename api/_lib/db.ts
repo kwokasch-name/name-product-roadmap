@@ -127,12 +127,26 @@ async function migratePrimaryKeysToUuid(p: Pool): Promise<void> {
       if (!typeResult.rows[0] || typeResult.rows[0].data_type === 'uuid') continue;
 
       console.log(`Migrating ${table}.id from ${typeResult.rows[0].data_type} to UUID...`);
+      // Clean up referencing tables first
+      if (table === 'okrs') {
+        await client.query('DELETE FROM okr_pods');
+        await client.query('DELETE FROM key_results');
+      }
+      if (table === 'initiatives') {
+        await client.query('DELETE FROM initiative_okrs');
+      }
       // Delete all rows — integer IDs can't be converted to valid UUIDs
       await client.query(`DELETE FROM ${table}`);
-      // Drop the primary key constraint and change column type
+      // Drop the primary key constraint
       await client.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_pkey`);
-      await client.query(`ALTER TABLE ${table} ALTER COLUMN id SET DEFAULT uuid_generate_v4()`);
+      // Drop any existing default (e.g. nextval sequence from SERIAL)
+      await client.query(`ALTER TABLE ${table} ALTER COLUMN id DROP DEFAULT`);
+      // Drop the sequence if it was auto-created for SERIAL
+      await client.query(`DROP SEQUENCE IF EXISTS ${table}_id_seq`);
+      // Change column type to UUID
       await client.query(`ALTER TABLE ${table} ALTER COLUMN id TYPE UUID USING uuid_generate_v4()`);
+      // Set UUID default and re-add primary key
+      await client.query(`ALTER TABLE ${table} ALTER COLUMN id SET DEFAULT uuid_generate_v4()`);
       await client.query(`ALTER TABLE ${table} ADD PRIMARY KEY (id)`);
       console.log(`${table}.id migrated to UUID`);
     } catch (err) {
