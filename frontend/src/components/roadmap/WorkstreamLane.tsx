@@ -68,10 +68,13 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrI
   const rowCount = positionedInitiatives.length > 0
     ? Math.max(...positionedInitiatives.map((p) => p.row)) + 1
     : 1;
-  const laneHeight = Math.max(80, rowCount * ROW_HEIGHT + (rowCount + 1) * ROW_GAP);
+  // Padding-bottom creates space below the last row of bars so the container
+  // grows to fit all rows naturally without needing an explicit height.
+  const contentHeight = rowCount * ROW_HEIGHT + (rowCount + 1) * ROW_GAP;
+  const paddingBottom = Math.max(contentHeight, 80);
 
   return (
-    <div className="flex border-b border-gray-200" style={{ height: laneHeight }}>
+    <div className="flex border-b border-gray-200">
       <div className="w-32 flex-shrink-0 px-3 py-4 border-r border-gray-200 bg-gray-50">
         <span
           className={`inline-block px-2 py-1 text-xs font-medium rounded ${
@@ -85,12 +88,16 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrI
           {title}
         </span>
       </div>
-      <div ref={containerRef} className="relative bg-white" style={{ width: totalWidth, height: laneHeight }}>
+      <div
+        ref={containerRef}
+        className="relative bg-white"
+        style={{ width: totalWidth, paddingBottom }}
+      >
         {positionedInitiatives.map(({ initiative, position, row }) => (
           <InitiativeBar key={initiative.id} initiative={initiative} position={position} row={row} allOkrIds={allOkrIds} />
         ))}
         {positionedInitiatives.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
+          <div className="flex items-center justify-center text-sm text-gray-400" style={{ height: paddingBottom }}>
             No initiatives scheduled
           </div>
         )}
