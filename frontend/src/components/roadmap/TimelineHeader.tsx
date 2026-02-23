@@ -48,7 +48,7 @@ export function TimelineHeader({ startDate, endDate }: TimelineHeaderProps) {
           {quarters.map((q, index) => (
             <div
               key={index}
-              className="px-2 py-1.5 text-center border-r border-gray-200 last:border-r-0"
+              className="px-2 py-1.5 text-center border-r border-gray-500 last:border-r-0"
               style={{ width: q.span * MONTH_WIDTH }}
             >
               <span className="text-xs font-semibold text-gray-700 tracking-wide uppercase">{q.label}</span>
