@@ -111,7 +111,7 @@ export function RoadmapView() {
               </svg>
             </Button>
           </div>
-          <div className="flex items-center gap-1 border border-gray-300 rounded-md px-1">
+          <div className="flex items-center gap-1 border border-gray-300 rounded-md p-1">
             {(['Retail Therapy', 'JSON ID', 'Migration'] as const).map((pod) => (
               <button
                 key={pod}
