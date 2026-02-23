@@ -71,7 +71,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrI
   const laneHeight = Math.max(80, rowCount * ROW_HEIGHT + (rowCount + 1) * ROW_GAP);
 
   return (
-    <div className="flex border-b border-gray-200" style={{ minHeight: laneHeight }}>
+    <div className="flex border-b border-gray-200" style={{ height: laneHeight }}>
       <div className="w-32 flex-shrink-0 px-3 py-4 border-r border-gray-200 bg-gray-50">
         <span
           className={`inline-block px-2 py-1 text-xs font-medium rounded ${
@@ -85,7 +85,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrI
           {title}
         </span>
       </div>
-      <div ref={containerRef} className="relative bg-white" style={{ width: totalWidth }}>
+      <div ref={containerRef} className="relative bg-white" style={{ width: totalWidth, height: laneHeight }}>
         {positionedInitiatives.map(({ initiative, position, row }) => (
           <InitiativeBar key={initiative.id} initiative={initiative} position={position} row={row} allOkrIds={allOkrIds} />
         ))}
