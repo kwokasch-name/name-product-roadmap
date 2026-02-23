@@ -7,7 +7,7 @@ body {
 }
 
 .initiative-bar {
-  @apply absolute h-10 rounded-md px-2 py-1 text-white text-sm font-medium cursor-pointer transition-all;
+  @apply absolute rounded-md px-2 text-white text-sm font-medium cursor-pointer transition-all;
   @apply hover:shadow-lg hover:scale-[1.02];
   @apply flex items-center justify-between gap-2 overflow-hidden;
 }

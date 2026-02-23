@@ -12,8 +12,8 @@ interface WorkstreamLaneProps {
   allOkrIds: string[];
 }
 
-const ROW_HEIGHT = 36;
-const ROW_GAP = 4;
+const ROW_HEIGHT = 32;
+const ROW_GAP = 2;
 
 function assignRows(
   items: { initiative: Initiative; position: { left: number; width: number } }[]
@@ -71,7 +71,7 @@ export function WorkstreamLane({ title, initiatives, viewStart, viewEnd, allOkrI
   // Padding-bottom creates space below the last row of bars so the container
   // grows to fit all rows naturally without needing an explicit height.
   const contentHeight = rowCount * ROW_HEIGHT + (rowCount + 1) * ROW_GAP;
-  const paddingBottom = Math.max(contentHeight, 80);
+  const paddingBottom = Math.max(contentHeight, 48);
 
   return (
     <div className="flex border-b border-gray-200">

@@ -4,7 +4,7 @@ import { useRoadmapContext } from '../../context/RoadmapContext';
 import { getInitiativeBarColor } from '../../lib/okrColors';
 import type { Initiative } from '../../types';
 
-const ROW_HEIGHT = 42;
+const ROW_HEIGHT = 32;
 const ROW_GAP = 2;
 
 interface InitiativeBarProps {
