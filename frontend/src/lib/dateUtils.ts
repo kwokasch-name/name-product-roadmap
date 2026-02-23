@@ -59,6 +59,19 @@ export function getInitiativePosition(
   };
 }
 
+/**
+ * Returns the pixel offset of "today" from the start of the timeline.
+ * Returns null if today is outside the view range.
+ */
+export function getTodayOffset(viewStart: Date, viewEnd: Date, totalWidth: number): number | null {
+  const now = new Date();
+  if (now < viewStart || now > viewEnd) return null;
+  const viewDays = getDaysBetween(viewStart, viewEnd);
+  if (viewDays <= 0) return null;
+  const daysSinceStart = getDaysBetween(viewStart, now);
+  return (daysSinceStart / viewDays) * totalWidth;
+}
+
 export function getDefaultViewRange(): { start: Date; end: Date } {
   const now = new Date();
   const year = now.getFullYear();
