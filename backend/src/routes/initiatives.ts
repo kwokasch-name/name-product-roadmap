@@ -6,6 +6,7 @@ import { isJiraConfigured, getEpic, mapEpicToInitiativeFields } from '../service
 const router = Router();
 
 function rowToInitiative(row: any): Initiative {
+  const okrId = row.okr_id != null ? String(row.okr_id) : null;
   return {
     id: row.id,
     title: row.title,
@@ -13,7 +14,9 @@ function rowToInitiative(row: any): Initiative {
     startDate: row.start_date,
     endDate: row.end_date,
     developerCount: row.developer_count,
-    okrId: row.okr_id,
+    okrId,
+    // Frontend roadmap expects okrIds[] (Vercel API); mirror single okr_id as a one-element list
+    okrIds: okrId ? [okrId] : [],
     successCriteria: row.success_criteria,
     pod: row.pod,
     status: row.status,

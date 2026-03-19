@@ -40,18 +40,23 @@ export const NO_OKR_COLOR: OkrColorEntry = {
  * @param okrId The OKR's UUID
  * @param allOkrIds Sorted list of all OKR IDs (used for deterministic index assignment)
  */
-export function getOkrColor(okrId: string, allOkrIds: string[]): OkrColorEntry {
-  const index = allOkrIds.indexOf(okrId);
+export function getOkrColor(okrId: string, allOkrIds: string[] | undefined | null): OkrColorEntry {
+  const list = allOkrIds ?? [];
+  const index = list.indexOf(okrId);
   if (index === -1) return NO_OKR_COLOR;
   return OKR_COLORS[index % OKR_COLORS.length];
 }
 
 /**
  * Get the color for an initiative bar based on its primary (first) OKR.
- * @param okrIds The initiative's OKR IDs (ordered by priority)
+ * @param okrIds The initiative's OKR IDs (ordered by priority); may be missing from API payloads
  * @param allOkrIds Sorted list of all OKR IDs
  */
-export function getInitiativeBarColor(okrIds: string[], allOkrIds: string[]): OkrColorEntry {
-  if (okrIds.length === 0) return NO_OKR_COLOR;
-  return getOkrColor(okrIds[0], allOkrIds);
+export function getInitiativeBarColor(
+  okrIds: string[] | undefined | null,
+  allOkrIds: string[] | undefined | null
+): OkrColorEntry {
+  const ids = okrIds ?? [];
+  if (ids.length === 0) return NO_OKR_COLOR;
+  return getOkrColor(ids[0], allOkrIds);
 }

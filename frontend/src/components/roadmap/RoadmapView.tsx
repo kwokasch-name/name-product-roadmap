@@ -24,7 +24,7 @@ export function RoadmapView() {
   // If no OKRs are selected, show all initiatives
   // If OKRs are selected, only show initiatives linked to those OKRs
   const filteredInitiatives = selectedOKRIds.size > 0
-    ? initiatives?.filter((i) => i.okrIds.some((id) => selectedOKRIds.has(id))) || []
+    ? initiatives?.filter((i) => (i.okrIds ?? []).some((id) => selectedOKRIds.has(id))) || []
     : initiatives || [];
 
   const retailTherapyInitiatives = filteredInitiatives.filter((i) => i.pod === 'Retail Therapy');

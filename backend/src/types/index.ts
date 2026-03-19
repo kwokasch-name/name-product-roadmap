@@ -32,6 +32,8 @@ export interface Initiative {
   endDate: string | null;
   developerCount: number;
   okrId: string | null;
+  /** Same OKRs as okrId, as a list — matches frontend / Vercel API shape */
+  okrIds: string[];
   okr?: OKR;
   successCriteria: string | null;
   pod: Pod;
