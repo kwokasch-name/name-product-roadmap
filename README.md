@@ -3,6 +3,7 @@
 A product roadmap app that ties **Objectives and Key Results (OKRs)** to **initiatives**, shows initiatives on a timeline by team (pod), and can sync initiative data with **Jira** epics.
 
 ---
+Paige wrote this neat
 
 ## What This App Does (User Perspective)
 
